@@ -141,11 +141,11 @@ func (h *Handler) LoadUser(next http.Handler) http.Handler {
 }
 
 type githubUser struct {
-	ID        int64   `json:"id"`
-	Login     string  `json:"login"`
-	Name      string  `json:"name"`
-	AvatarURL string  `json:"avatar_url"`
-	Email     string  `json:"email"`
+	ID        int64  `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	Email     string `json:"email"`
 }
 
 func (h *Handler) exchangeCode(ctx context.Context, code string) (string, error) {
@@ -169,7 +169,7 @@ func (h *Handler) exchangeCode(ctx context.Context, code string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		AccessToken string `json:"access_token"`
@@ -199,7 +199,7 @@ func (h *Handler) fetchGitHubUser(ctx context.Context, token string) (*githubUse
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
