@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +17,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/auth"
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/users"
+	"github.com/lazzerex/gitrpg/internal/worker"
 )
 
 type Server struct {
@@ -24,13 +26,15 @@ type Server struct {
 	db        *pgxpool.Pool
 	redis     *redis.Client
 	logger    *slog.Logger
-	templates *template.Template
+	templates map[string]*template.Template
 	auth      *auth.Handler
+	worker    *worker.Worker
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger) *Server {
+func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker) *Server {
 	userStore := users.NewStore(db)
 	authHandler := auth.NewHandler(cfg, userStore, logger)
+	authHandler.SetPostLogin(w.SyncUser)
 
 	s := &Server{
 		cfg:    cfg,
@@ -39,28 +43,37 @@ func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.L
 		redis:  rdb,
 		logger: logger,
 		auth:   authHandler,
+		worker: w,
 	}
 	s.registerMiddleware()
 	s.registerRoutes()
 	return s
 }
 
-func (s *Server) LoadTemplates(pattern string) error {
-	tmpl, err := template.ParseGlob(pattern)
-	if err != nil {
-		return err
+// LoadTemplates builds a per-page template set (base.html + page) for each page
+// in dir. Each page gets its own isolated set so {{define "content"}} blocks don't collide.
+func (s *Server) LoadTemplates(dir string) error {
+	pages := []string{"index.html", "profile.html"}
+	s.templates = make(map[string]*template.Template, len(pages))
+	base := filepath.Join(dir, "base.html")
+	for _, page := range pages {
+		tmpl, err := template.ParseFiles(base, filepath.Join(dir, page))
+		if err != nil {
+			return err
+		}
+		s.templates[page] = tmpl
 	}
-	s.templates = tmpl
 	return nil
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
-	if s.templates == nil {
-		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+	tmpl, ok := s.templates[name]
+	if !ok {
+		http.Error(w, "template not found: "+name, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.templates.ExecuteTemplate(w, name, data); err != nil {
+	if err := tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
 		s.logger.Error("template render failed", "name", name, "error", err)
 	}
 }
@@ -83,6 +96,7 @@ func (s *Server) registerRoutes() {
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.auth.RequireAuth)
 		r.Get("/profile", s.handleProfile)
+		r.Post("/sync", s.handleSync)
 	})
 }
 
@@ -92,6 +106,12 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "profile.html", s.templateData(r))
+}
+
+func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
+	user, _ := r.Context().Value(users.ContextKey).(*users.User)
+	s.worker.SyncUser(user)
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
