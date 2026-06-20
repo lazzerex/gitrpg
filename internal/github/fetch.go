@@ -60,9 +60,9 @@ type statsResult struct {
 		Remaining int `json:"remaining"`
 	} `json:"rateLimit"`
 	User *struct {
-		Followers    struct{ TotalCount int } `json:"followers"`
-		PullRequests struct{ TotalCount int } `json:"pullRequests"`
-		Issues       struct{ TotalCount int } `json:"issues"`
+		Followers               struct{ TotalCount int } `json:"followers"`
+		PullRequests            struct{ TotalCount int } `json:"pullRequests"`
+		Issues                  struct{ TotalCount int } `json:"issues"`
 		ContributionsCollection struct {
 			TotalCommitContributions            int `json:"totalCommitContributions"`
 			TotalPullRequestReviewContributions int `json:"totalPullRequestReviewContributions"`
@@ -76,10 +76,10 @@ type statsResult struct {
 			} `json:"contributionCalendar"`
 			CommitContributionsByRepository []struct {
 				Repository struct {
-					NameWithOwner   string  `json:"nameWithOwner"`
-					IsFork          bool    `json:"isFork"`
-					StargazerCount  int     `json:"stargazerCount"`
-					ForkCount       int     `json:"forkCount"`
+					NameWithOwner   string `json:"nameWithOwner"`
+					IsFork          bool   `json:"isFork"`
+					StargazerCount  int    `json:"stargazerCount"`
+					ForkCount       int    `json:"forkCount"`
 					PrimaryLanguage *struct {
 						Name string `json:"name"`
 					} `json:"primaryLanguage"`
