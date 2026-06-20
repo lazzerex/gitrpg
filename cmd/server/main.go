@@ -54,7 +54,7 @@ func main() {
 		os.Exit(1)
 	}
 	rdb := redis.NewClient(opts)
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		logger.Error("redis ping failed", "error", err)
