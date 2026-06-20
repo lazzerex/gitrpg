@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}GitHub RPG{{end}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            950: '#0a0a0f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full text-gray-100">
+    <nav class="border-b border-gray-800 bg-gray-900">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-lg font-bold text-white tracking-tight">GitHub RPG</a>
+            <div>
+                {{if .User}}
+                    <a href="/profile" class="text-sm text-gray-400 hover:text-white mr-4">{{.User.Login}}</a>
+                    <a href="/logout" class="text-sm text-gray-400 hover:text-white">Logout</a>
+                {{else}}
+                    <a href="/auth/github" class="text-sm bg-white text-gray-900 px-3 py-1.5 rounded font-medium hover:bg-gray-100">Login with GitHub</a>
+                {{end}}
+            </div>
+        </div>
+    </nav>
+    <main>
+        {{block "content" .}}{{end}}
+    </main>
+</body>
+</html>
