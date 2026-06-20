@@ -67,7 +67,6 @@ func (s *Server) render(w http.ResponseWriter, name string, data any) {
 
 func (s *Server) registerMiddleware() {
 	s.router.Use(middleware.RequestID)
-	s.router.Use(middleware.RealIP)
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(s.requestLogger)
 	s.router.Use(s.auth.LoadUser)
@@ -111,7 +110,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok"}`)
+	_, _ = fmt.Fprintf(w, `{"status":"ok"}`)
 }
 
 type templateData struct {
