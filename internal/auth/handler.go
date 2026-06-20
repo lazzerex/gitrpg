@@ -17,13 +17,19 @@ import (
 )
 
 type Handler struct {
-	cfg    *config.Config
-	users  *users.Store
-	logger *slog.Logger
+	cfg       *config.Config
+	users     *users.Store
+	logger    *slog.Logger
+	postLogin func(*users.User)
 }
 
 func NewHandler(cfg *config.Config, store *users.Store, logger *slog.Logger) *Handler {
 	return &Handler{cfg: cfg, users: store, logger: logger}
+}
+
+// SetPostLogin registers a callback invoked (in a goroutine) after successful login.
+func (h *Handler) SetPostLogin(fn func(*users.User)) {
+	h.postLogin = fn
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +107,9 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.postLogin != nil {
+		go h.postLogin(user)
+	}
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
