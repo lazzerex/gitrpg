@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/joho/godotenv"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 
 	"github.com/lazzerex/gitrpg/internal/config"
@@ -29,7 +29,7 @@ func main() {
 		logger.Error("db open failed", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		logger.Error("set dialect failed", "error", err)
