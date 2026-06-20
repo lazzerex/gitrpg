@@ -13,7 +13,9 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/lazzerex/gitrpg/internal/config"
+	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/server"
+	"github.com/lazzerex/gitrpg/internal/worker"
 )
 
 func main() {
@@ -62,15 +64,22 @@ func main() {
 	}
 	logger.Info("redis connected")
 
-	srv := server.New(cfg, db, rdb, logger)
+	githubSvc := github.NewService(db, logger)
+	w := worker.New(githubSvc, logger)
 
-	if err := srv.LoadTemplates("web/templates/*.html"); err != nil {
+	srv := server.New(cfg, db, rdb, logger, w)
+
+	if err := srv.LoadTemplates("web/templates"); err != nil {
 		logger.Error("template load failed", "error", err)
 		os.Exit(1)
 	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+	go w.Start(workerCtx)
 
 	go func() {
 		if err := srv.Start(); err != nil {
