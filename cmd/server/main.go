@@ -16,6 +16,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/server"
+	"github.com/lazzerex/gitrpg/internal/users"
 	"github.com/lazzerex/gitrpg/internal/worker"
 )
 
@@ -65,11 +66,12 @@ func main() {
 	}
 	logger.Info("redis connected")
 
+	userStore := users.NewStore(db)
 	githubSvc := github.NewService(db, logger)
 	charSvc := characters.NewService(db, logger)
-	w := worker.New(githubSvc, charSvc, logger)
+	w := worker.New(githubSvc, charSvc, userStore, logger)
 
-	srv := server.New(cfg, db, rdb, logger, w, charSvc)
+	srv := server.New(cfg, db, rdb, logger, w, charSvc, userStore)
 
 	if err := srv.LoadTemplates("web/templates"); err != nil {
 		logger.Error("template load failed", "error", err)
