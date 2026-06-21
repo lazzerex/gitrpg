@@ -37,8 +37,7 @@ type Server struct {
 	characters *characters.Service
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service) *Server {
-	userStore := users.NewStore(db)
+func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, userStore *users.Store) *Server {
 	authHandler := auth.NewHandler(cfg, userStore, logger)
 	authHandler.SetPostLogin(w.SyncUser)
 
@@ -100,7 +99,7 @@ var templateFuncs = template.FuncMap{
 // LoadTemplates builds a per-page template set (base.html + page) for each page
 // in dir. Each page gets its own isolated set so {{define "content"}} blocks don't collide.
 func (s *Server) LoadTemplates(dir string) error {
-	pages := []string{"index.html", "profile.html"}
+	pages := []string{"index.html", "profile.html", "public.html", "cards.html"}
 	s.templates = make(map[string]*template.Template, len(pages))
 	base := filepath.Join(dir, "base.html")
 	for _, page := range pages {
@@ -143,6 +142,9 @@ func (s *Server) registerRoutes() {
 	s.router.Get("/card/{username}", s.handleCard)
 	s.router.Get("/card/compact/{username}", s.handleCardCompact)
 
+	s.router.Get("/u/{username}", s.handlePublicProfile)
+	s.router.Get("/cards", s.handleCards)
+
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.auth.RequireAuth)
 		r.Get("/profile", s.handleProfile)
@@ -177,6 +179,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		Character:   char,
 		IsStale:     isStale,
 		AccentColor: accentColor,
+		BaseURL:     requestBaseURL(r),
 	})
 }
 
@@ -214,11 +217,58 @@ type profileData struct {
 	Character   *stats.Character
 	IsStale     bool
 	AccentColor string
+	BaseURL     string
+}
+
+type publicProfileData struct {
+	User        *users.User
+	ProfileUser *users.User
+	Character   *stats.Character
+	AccentColor string
+	BaseURL     string
 }
 
 func (s *Server) baseData(r *http.Request) baseData {
 	u, _ := r.Context().Value(users.ContextKey).(*users.User)
 	return baseData{User: u}
+}
+
+func requestBaseURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
+}
+
+func (s *Server) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	viewer, _ := r.Context().Value(users.ContextKey).(*users.User)
+
+	profileUser, err := s.users.GetByLogin(r.Context(), username)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	char, _ := s.characters.GetByUserID(r.Context(), profileUser.ID)
+
+	accentColor := svgpkg.ClassColor("")
+	if char != nil {
+		accentColor = svgpkg.ClassColor(char.Class)
+	}
+
+	s.render(w, "public.html", publicProfileData{
+		User:        viewer,
+		ProfileUser: profileUser,
+		Character:   char,
+		AccentColor: accentColor,
+		BaseURL:     requestBaseURL(r),
+	})
+}
+
+func (s *Server) handleCards(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "cards.html", s.baseData(r))
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {
