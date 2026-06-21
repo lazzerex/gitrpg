@@ -69,7 +69,7 @@ func main() {
 	charSvc := characters.NewService(db, logger)
 	w := worker.New(githubSvc, charSvc, logger)
 
-	srv := server.New(cfg, db, rdb, logger, w)
+	srv := server.New(cfg, db, rdb, logger, w, charSvc)
 
 	if err := srv.LoadTemplates("web/templates"); err != nil {
 		logger.Error("template load failed", "error", err)
