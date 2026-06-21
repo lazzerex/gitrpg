@@ -21,7 +21,7 @@
             {{end}}
             <div>
                 <h1 class="text-2xl font-bold text-white">{{.User.Login}}</h1>
-                <p class="text-indigo-400 font-medium">Level {{.Character.Level}} {{.Character.Class}}</p>
+                <p class="font-medium" style="color: {{.AccentColor}}">Level {{.Character.Level}} {{.Character.Class}}</p>
                 <p class="text-gray-500 text-sm mt-0.5">{{.Character.Title}}</p>
             </div>
         </div>
@@ -31,31 +31,40 @@
                 <span>{{.Character.TotalXP}} XP</span>
                 <span>{{.Character.XPIntoLevel}} / {{.Character.XPForLevel}} to level {{inc .Character.Level}}</span>
             </div>
-            <div class="w-full bg-gray-800 rounded-full h-2.5">
-                <div class="bg-indigo-500 h-2.5 rounded-full" style="width: {{xpPercent .Character.XPIntoLevel .Character.XPForLevel}}%"></div>
+            <div class="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                <div id="xp-bar"
+                     class="h-2.5 rounded-full"
+                     style="background-color: {{.AccentColor}}; width: 0%; transition: width 1.2s cubic-bezier(0.4,0,0.2,1)"
+                     data-width="{{xpPercent .Character.XPIntoLevel .Character.XPForLevel}}">
+                </div>
             </div>
         </div>
 
         <div class="grid grid-cols-5 gap-3 mb-6">
             <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs text-gray-500 mb-1">STR</p>
-                <p class="text-xl font-bold text-white">{{.Character.Strength}}</p>
+                <p class="text-xs font-semibold text-gray-400 mb-0.5">STR</p>
+                <p class="text-[10px] text-gray-600 mb-1">Strength</p>
+                <p class="text-xl font-bold text-white" data-stat="{{.Character.Strength}}">0</p>
             </div>
             <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs text-gray-500 mb-1">INT</p>
-                <p class="text-xl font-bold text-white">{{.Character.Intelligence}}</p>
+                <p class="text-xs font-semibold text-gray-400 mb-0.5">INT</p>
+                <p class="text-[10px] text-gray-600 mb-1">Intelligence</p>
+                <p class="text-xl font-bold text-white" data-stat="{{.Character.Intelligence}}">0</p>
             </div>
             <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs text-gray-500 mb-1">WIS</p>
-                <p class="text-xl font-bold text-white">{{.Character.Wisdom}}</p>
+                <p class="text-xs font-semibold text-gray-400 mb-0.5">WIS</p>
+                <p class="text-[10px] text-gray-600 mb-1">Wisdom</p>
+                <p class="text-xl font-bold text-white" data-stat="{{.Character.Wisdom}}">0</p>
             </div>
             <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs text-gray-500 mb-1">DEX</p>
-                <p class="text-xl font-bold text-white">{{.Character.Dexterity}}</p>
+                <p class="text-xs font-semibold text-gray-400 mb-0.5">DEX</p>
+                <p class="text-[10px] text-gray-600 mb-1">Dexterity</p>
+                <p class="text-xl font-bold text-white" data-stat="{{.Character.Dexterity}}">0</p>
             </div>
             <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs text-gray-500 mb-1">CHA</p>
-                <p class="text-xl font-bold text-white">{{.Character.Charisma}}</p>
+                <p class="text-xs font-semibold text-gray-400 mb-0.5">CHA</p>
+                <p class="text-[10px] text-gray-600 mb-1">Charisma</p>
+                <p class="text-xl font-bold text-white" data-stat="{{.Character.Charisma}}">0</p>
             </div>
         </div>
 
@@ -68,6 +77,16 @@
             </form>
         </div>
 
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-4">README Card</p>
+        <img src="/card/{{.User.Login}}.svg" alt="character card" class="w-full rounded mb-4">
+        <img src="/card/compact/{{.User.Login}}.svg" alt="compact card" class="rounded mb-4">
+        <div class="bg-gray-800 rounded p-3">
+            <p class="text-xs text-gray-500 mb-1">Copy into your GitHub README:</p>
+            <code class="text-xs text-gray-300 break-all">![GitHub RPG](https://your-domain/card/{{.User.Login}}.svg)</code>
+        </div>
     </div>
 
     {{else}}
@@ -85,4 +104,32 @@
     {{end}}
 
 </div>
+
+<script>
+(function () {
+    function animateCounter(el, target, duration) {
+        var start = performance.now();
+        function step(now) {
+            var progress = Math.min((now - start) / duration, 1);
+            el.textContent = Math.floor(progress * target);
+            if (progress < 1) requestAnimationFrame(step);
+            else el.textContent = target;
+        }
+        requestAnimationFrame(step);
+    }
+
+    document.querySelectorAll('[data-stat]').forEach(function (el) {
+        animateCounter(el, parseInt(el.dataset.stat, 10), 900);
+    });
+
+    var bar = document.getElementById('xp-bar');
+    if (bar) {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                bar.style.width = bar.dataset.width + '%';
+            });
+        });
+    }
+})();
+</script>
 {{end}}
