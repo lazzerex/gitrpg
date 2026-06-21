@@ -19,6 +19,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/stats"
+	svgpkg "github.com/lazzerex/gitrpg/internal/svg"
 	"github.com/lazzerex/gitrpg/internal/users"
 	"github.com/lazzerex/gitrpg/internal/worker"
 )
@@ -32,6 +33,7 @@ type Server struct {
 	templates  map[string]*template.Template
 	auth       *auth.Handler
 	worker     *worker.Worker
+	users      *users.Store
 	characters *characters.Service
 }
 
@@ -48,6 +50,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.L
 		logger:     logger,
 		auth:       authHandler,
 		worker:     w,
+		users:      userStore,
 		characters: charSvc,
 	}
 	s.registerMiddleware()
@@ -137,6 +140,9 @@ func (s *Server) registerRoutes() {
 	s.router.Get("/auth/github/callback", s.auth.Callback)
 	s.router.Get("/logout", s.auth.Logout)
 
+	s.router.Get("/card/{username}", s.handleCard)
+	s.router.Get("/card/compact/{username}", s.handleCardCompact)
+
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.auth.RequireAuth)
 		r.Get("/profile", s.handleProfile)
@@ -161,10 +167,16 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		isStale = time.Since(char.UpdatedAt) > 12*time.Hour
 	}
 
+	accentColor := svgpkg.ClassColor("")
+	if char != nil {
+		accentColor = svgpkg.ClassColor(char.Class)
+	}
+
 	s.render(w, "profile.html", profileData{
-		User:      user,
-		Character: char,
-		IsStale:   isStale,
+		User:        user,
+		Character:   char,
+		IsStale:     isStale,
+		AccentColor: accentColor,
 	})
 }
 
@@ -198,9 +210,10 @@ type baseData struct {
 }
 
 type profileData struct {
-	User      *users.User
-	Character *stats.Character
-	IsStale   bool
+	User        *users.User
+	Character   *stats.Character
+	IsStale     bool
+	AccentColor string
 }
 
 func (s *Server) baseData(r *http.Request) baseData {
@@ -221,6 +234,73 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 			"request_id", middleware.GetReqID(r.Context()),
 		)
 	})
+}
+
+func (s *Server) handleCard(w http.ResponseWriter, r *http.Request) {
+	s.serveCard(w, r, false)
+}
+
+func (s *Server) handleCardCompact(w http.ResponseWriter, r *http.Request) {
+	s.serveCard(w, r, true)
+}
+
+func (s *Server) serveCard(w http.ResponseWriter, r *http.Request, compact bool) {
+	username := chi.URLParam(r, "username")
+	// strip .svg suffix — URLs are /card/username.svg
+	if len(username) > 4 && username[len(username)-4:] == ".svg" {
+		username = username[:len(username)-4]
+	}
+
+	prefix := "svg:card:"
+	if compact {
+		prefix = "svg:compact:"
+	}
+	cacheKey := prefix + username
+
+	cached, err := s.redis.Get(r.Context(), cacheKey).Result()
+	if err == nil {
+		s.svgResponse(w, cached)
+		return
+	}
+	if err != redis.Nil {
+		s.logger.Warn("redis get failed", "key", cacheKey, "error", err)
+	}
+
+	user, err := s.users.GetByLogin(r.Context(), username)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	char, err := s.characters.GetByUserID(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, "character not found — sync first", http.StatusNotFound)
+		return
+	}
+
+	var svgStr string
+	if compact {
+		svgStr, err = svgpkg.Compact(user.Login, char)
+	} else {
+		svgStr, err = svgpkg.Card(user.Login, char)
+	}
+	if err != nil {
+		s.logger.Error("svg generation failed", "user", username, "error", err)
+		http.Error(w, "svg generation failed", http.StatusInternalServerError)
+		return
+	}
+
+	if setErr := s.redis.Set(r.Context(), cacheKey, svgStr, time.Hour).Err(); setErr != nil {
+		s.logger.Warn("redis set failed", "key", cacheKey, "error", setErr)
+	}
+
+	s.svgResponse(w, svgStr)
+}
+
+func (s *Server) svgResponse(w http.ResponseWriter, svg string) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_, _ = fmt.Fprint(w, svg)
 }
 
 func (s *Server) Start() error {
