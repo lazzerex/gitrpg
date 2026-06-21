@@ -15,12 +15,18 @@ import (
 type Worker struct {
 	github     *github.Service
 	characters *characters.Service
+	userStore  *users.Store
 	logger     *slog.Logger
 }
 
 // New creates a Worker.
-func New(githubSvc *github.Service, charSvc *characters.Service, logger *slog.Logger) *Worker {
-	return &Worker{github: githubSvc, characters: charSvc, logger: logger}
+func New(githubSvc *github.Service, charSvc *characters.Service, userStore *users.Store, logger *slog.Logger) *Worker {
+	return &Worker{
+		github:     githubSvc,
+		characters: charSvc,
+		userStore:  userStore,
+		logger:     logger,
+	}
 }
 
 // Start runs the periodic re-sync loop until ctx is cancelled.
@@ -32,9 +38,25 @@ func (w *Worker) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			// TODO: list all users and re-sync each (users.Store.ListAll not yet implemented)
-			w.logger.Info("worker: periodic sync tick")
+			w.syncAll(ctx)
 		}
+	}
+}
+
+func (w *Worker) syncAll(ctx context.Context) {
+	allUsers, err := w.userStore.ListAll(ctx)
+	if err != nil {
+		w.logger.Error("worker: list users failed", "error", err)
+		return
+	}
+	w.logger.Info("worker: periodic sync starting", "count", len(allUsers))
+	for _, u := range allUsers {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		w.SyncUser(u)
 	}
 }
 
