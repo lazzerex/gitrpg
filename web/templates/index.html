@@ -3,17 +3,45 @@
 {{define "title"}}GitHub RPG — Your GitHub Activity, Transformed{{end}}
 
 {{define "content"}}
-<div class="max-w-6xl mx-auto px-4 py-20 text-center">
-    <h1 class="text-5xl font-bold text-white mb-4">Your GitHub, as an RPG</h1>
-    <p class="text-xl text-gray-400 mb-10">Connect GitHub. Get a character. Show it in your README.</p>
-    {{if .User}}
-    <a href="/profile" class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold text-lg hover:bg-indigo-500 transition-colors">
-        View Your Character
-    </a>
-    {{else}}
-    <a href="/auth/github" class="inline-block bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors">
-        Login with GitHub
-    </a>
-    {{end}}
+<div class="max-w-4xl mx-auto px-4 py-20 text-center">
+
+    <h1 class="text-5xl font-bold text-white mb-4 tracking-tight">Your GitHub, as an RPG</h1>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">
+        Connect GitHub. Earn XP from commits, PRs, and reviews. Get a character class and a README card.
+    </p>
+
+    <div class="flex flex-wrap gap-3 justify-center mb-16">
+        {{if .User}}
+        <a href="/profile" class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold text-lg hover:bg-indigo-500 transition-colors">
+            View Your Character
+        </a>
+        {{else}}
+        <a href="/auth/github" class="inline-block bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors">
+            Login with GitHub
+        </a>
+        {{end}}
+        <a href="/cards" class="inline-block bg-gray-800 text-gray-200 px-6 py-3 rounded-lg font-semibold text-lg hover:bg-gray-700 transition-colors">
+            Preview a Card
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Character</p>
+            <p class="text-white font-semibold mb-1">Level up your profile</p>
+            <p class="text-sm text-gray-400">Earn XP from commits, PRs, reviews, and issues. Level up as you contribute.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Stats</p>
+            <p class="text-white font-semibold mb-1">STR · INT · WIS · DEX · CHA</p>
+            <p class="text-sm text-gray-400">Five stats calculated from your activity. Earn a class based on your primary language.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">README Card</p>
+            <p class="text-white font-semibold mb-1">Show off in your profile</p>
+            <p class="text-sm text-gray-400">SVG card updates automatically. Drop one line into your README and you're done.</p>
+        </div>
+    </div>
+
 </div>
 {{end}}
