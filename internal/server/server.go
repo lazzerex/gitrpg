@@ -11,43 +11,87 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/lazzerex/gitrpg/internal/auth"
+	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
+	"github.com/lazzerex/gitrpg/internal/stats"
 	"github.com/lazzerex/gitrpg/internal/users"
 	"github.com/lazzerex/gitrpg/internal/worker"
 )
 
 type Server struct {
-	cfg       *config.Config
-	router    *chi.Mux
-	db        *pgxpool.Pool
-	redis     *redis.Client
-	logger    *slog.Logger
-	templates map[string]*template.Template
-	auth      *auth.Handler
-	worker    *worker.Worker
+	cfg        *config.Config
+	router     *chi.Mux
+	db         *pgxpool.Pool
+	redis      *redis.Client
+	logger     *slog.Logger
+	templates  map[string]*template.Template
+	auth       *auth.Handler
+	worker     *worker.Worker
+	characters *characters.Service
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker) *Server {
+func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service) *Server {
 	userStore := users.NewStore(db)
 	authHandler := auth.NewHandler(cfg, userStore, logger)
 	authHandler.SetPostLogin(w.SyncUser)
 
 	s := &Server{
-		cfg:    cfg,
-		router: chi.NewRouter(),
-		db:     db,
-		redis:  rdb,
-		logger: logger,
-		auth:   authHandler,
-		worker: w,
+		cfg:        cfg,
+		router:     chi.NewRouter(),
+		db:         db,
+		redis:      rdb,
+		logger:     logger,
+		auth:       authHandler,
+		worker:     w,
+		characters: charSvc,
 	}
 	s.registerMiddleware()
 	s.registerRoutes()
 	return s
+}
+
+var templateFuncs = template.FuncMap{
+	"inc": func(n int) int { return n + 1 },
+	"xpPercent": func(into, for_ int) int {
+		if for_ <= 0 {
+			return 0
+		}
+		pct := into * 100 / for_
+		if pct > 100 {
+			return 100
+		}
+		return pct
+	},
+	"fmtAge": func(t time.Time) string {
+		d := time.Since(t)
+		switch {
+		case d < time.Minute:
+			return "just now"
+		case d < time.Hour:
+			m := int(d.Minutes())
+			if m == 1 {
+				return "1 minute ago"
+			}
+			return fmt.Sprintf("%d minutes ago", m)
+		case d < 24*time.Hour:
+			h := int(d.Hours())
+			if h == 1 {
+				return "1 hour ago"
+			}
+			return fmt.Sprintf("%d hours ago", h)
+		default:
+			days := int(d.Hours() / 24)
+			if days == 1 {
+				return "1 day ago"
+			}
+			return fmt.Sprintf("%d days ago", days)
+		}
+	},
 }
 
 // LoadTemplates builds a per-page template set (base.html + page) for each page
@@ -57,7 +101,7 @@ func (s *Server) LoadTemplates(dir string) error {
 	s.templates = make(map[string]*template.Template, len(pages))
 	base := filepath.Join(dir, "base.html")
 	for _, page := range pages {
-		tmpl, err := template.ParseFiles(base, filepath.Join(dir, page))
+		tmpl, err := template.New("").Funcs(templateFuncs).ParseFiles(base, filepath.Join(dir, page))
 		if err != nil {
 			return err
 		}
@@ -101,11 +145,27 @@ func (s *Server) registerRoutes() {
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "index.html", s.templateData(r))
+	s.render(w, "index.html", s.baseData(r))
 }
 
 func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "profile.html", s.templateData(r))
+	user, _ := r.Context().Value(users.ContextKey).(*users.User)
+
+	char, err := s.characters.GetByUserID(r.Context(), user.ID)
+	if err != nil && err != pgx.ErrNoRows {
+		s.logger.Error("character load failed", "user_id", user.ID, "error", err)
+	}
+
+	var isStale bool
+	if char != nil {
+		isStale = time.Since(char.UpdatedAt) > 12*time.Hour
+	}
+
+	s.render(w, "profile.html", profileData{
+		User:      user,
+		Character: char,
+		IsStale:   isStale,
+	})
 }
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
@@ -133,13 +193,19 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"status":"ok"}`)
 }
 
-type templateData struct {
+type baseData struct {
 	User *users.User
 }
 
-func (s *Server) templateData(r *http.Request) templateData {
+type profileData struct {
+	User      *users.User
+	Character *stats.Character
+	IsStale   bool
+}
+
+func (s *Server) baseData(r *http.Request) baseData {
 	u, _ := r.Context().Value(users.ContextKey).(*users.User)
-	return templateData{User: u}
+	return baseData{User: u}
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {
