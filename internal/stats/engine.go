@@ -2,6 +2,7 @@ package stats
 
 import (
 	"math"
+	"time"
 
 	"github.com/lazzerex/gitrpg/internal/github"
 )
@@ -20,6 +21,7 @@ type Character struct {
 	Charisma     int
 	Class        string
 	Title        string
+	UpdatedAt    time.Time
 }
 
 // Calculate derives a Character from synced GitHub stats.
