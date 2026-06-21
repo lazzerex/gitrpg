@@ -35,6 +35,19 @@ func (s *Store) Upsert(ctx context.Context, u *User) (*User, error) {
 	return scanUser(row)
 }
 
+func (s *Store) GetByLogin(ctx context.Context, login string) (*User, error) {
+	const q = `
+		SELECT id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
+		FROM users WHERE login = $1
+	`
+	row := s.db.QueryRow(ctx, q, login)
+	u, err := scanUser(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return u, err
+}
+
 func (s *Store) GetByID(ctx context.Context, id int64) (*User, error) {
 	const q = `
 		SELECT id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
