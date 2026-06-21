@@ -1,11 +1,88 @@
 {{template "base.html" .}}
 
-{{define "title"}}Profile — GitHub RPG{{end}}
+{{define "title"}}{{.User.Login}} — GitHub RPG{{end}}
 
 {{define "content"}}
-<div class="max-w-6xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-bold text-white mb-2">{{.User.Login}}</h1>
-    {{if .User.Name}}<p class="text-gray-400 mb-6">{{.User.Name}}</p>{{end}}
-    <p class="text-gray-500 text-sm">Character generation coming soon.</p>
+<div class="max-w-2xl mx-auto px-4 py-12">
+
+    {{if .IsStale}}
+    <div class="mb-6 px-4 py-3 bg-yellow-900/40 border border-yellow-700/50 rounded-lg text-yellow-300 text-sm">
+        Data is more than 12 hours old. Sync to refresh.
+    </div>
+    {{end}}
+
+    {{if .Character}}
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+
+        <div class="flex items-center gap-4 mb-6">
+            {{if .User.AvatarURL}}
+            <img src="{{.User.AvatarURL}}" alt="avatar" class="w-16 h-16 rounded-full border-2 border-gray-700">
+            {{end}}
+            <div>
+                <h1 class="text-2xl font-bold text-white">{{.User.Login}}</h1>
+                <p class="text-indigo-400 font-medium">Level {{.Character.Level}} {{.Character.Class}}</p>
+                <p class="text-gray-500 text-sm mt-0.5">{{.Character.Title}}</p>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex justify-between text-xs text-gray-400 mb-1.5">
+                <span>{{.Character.TotalXP}} XP</span>
+                <span>{{.Character.XPIntoLevel}} / {{.Character.XPForLevel}} to level {{inc .Character.Level}}</span>
+            </div>
+            <div class="w-full bg-gray-800 rounded-full h-2.5">
+                <div class="bg-indigo-500 h-2.5 rounded-full" style="width: {{xpPercent .Character.XPIntoLevel .Character.XPForLevel}}%"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-5 gap-3 mb-6">
+            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
+                <p class="text-xs text-gray-500 mb-1">STR</p>
+                <p class="text-xl font-bold text-white">{{.Character.Strength}}</p>
+            </div>
+            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
+                <p class="text-xs text-gray-500 mb-1">INT</p>
+                <p class="text-xl font-bold text-white">{{.Character.Intelligence}}</p>
+            </div>
+            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
+                <p class="text-xs text-gray-500 mb-1">WIS</p>
+                <p class="text-xl font-bold text-white">{{.Character.Wisdom}}</p>
+            </div>
+            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
+                <p class="text-xs text-gray-500 mb-1">DEX</p>
+                <p class="text-xl font-bold text-white">{{.Character.Dexterity}}</p>
+            </div>
+            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
+                <p class="text-xs text-gray-500 mb-1">CHA</p>
+                <p class="text-xl font-bold text-white">{{.Character.Charisma}}</p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-gray-800">
+            <p class="text-xs text-gray-500">Last synced {{fmtAge .Character.UpdatedAt}}</p>
+            <form method="POST" action="/sync">
+                <button type="submit" class="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-1.5 rounded transition-colors">
+                    Sync Now
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    {{else}}
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+        <h1 class="text-xl font-bold text-white mb-2">{{.User.Login}}</h1>
+        <p class="text-gray-400 text-sm mb-6">Syncing your GitHub data...</p>
+        <form method="POST" action="/sync">
+            <button type="submit" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded transition-colors">
+                Sync Now
+            </button>
+        </form>
+    </div>
+
+    {{end}}
+
 </div>
 {{end}}
