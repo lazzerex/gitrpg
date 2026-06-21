@@ -48,11 +48,11 @@ func (s *store) getByUserID(ctx context.Context, userID int64) (*stats.Character
 	err := s.db.QueryRow(ctx, `
 		SELECT total_xp, level, xp_into_level, xp_for_level,
 		       strength, intelligence, wisdom, dexterity, charisma,
-		       class, title
+		       class, title, updated_at
 		FROM characters WHERE user_id = $1`, userID).
 		Scan(&c.TotalXP, &c.Level, &c.XPIntoLevel, &c.XPForLevel,
 			&c.Strength, &c.Intelligence, &c.Wisdom, &c.Dexterity, &c.Charisma,
-			&c.Class, &c.Title)
+			&c.Class, &c.Title, &c.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
