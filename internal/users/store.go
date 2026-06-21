@@ -61,6 +61,32 @@ func (s *Store) GetByID(ctx context.Context, id int64) (*User, error) {
 	return u, err
 }
 
+func (s *Store) ListAll(ctx context.Context) ([]*User, error) {
+	const q = `
+		SELECT id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
+		FROM users ORDER BY id
+	`
+	rows, err := s.db.Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(
+			&u.ID, &u.GitHubID, &u.Login, &u.Name,
+			&u.AvatarURL, &u.Email, &u.AccessToken,
+			&u.CreatedAt, &u.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, &u)
+	}
+	return out, rows.Err()
+}
+
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
 	err := row.Scan(
