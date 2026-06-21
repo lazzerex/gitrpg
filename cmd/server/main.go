@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/server"
@@ -65,7 +66,8 @@ func main() {
 	logger.Info("redis connected")
 
 	githubSvc := github.NewService(db, logger)
-	w := worker.New(githubSvc, logger)
+	charSvc := characters.NewService(db, logger)
+	w := worker.New(githubSvc, charSvc, logger)
 
 	srv := server.New(cfg, db, rdb, logger, w)
 
