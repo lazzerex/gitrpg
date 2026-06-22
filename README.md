@@ -30,6 +30,11 @@ Commits earn XP. Repositories unlock classes. Every push levels you up.
 
 </div>
 
+<br>
+
+<img width="1339" height="862" alt="image" src="https://github.com/user-attachments/assets/3a77861c-d3b3-491a-8fec-34ca62563050" />
+
+
 
 ## What is this
 
@@ -37,6 +42,11 @@ GitHub RPG reads your public GitHub activity and assigns you a character. Your p
 
 You get a README card you can embed anywhere.
 
+![GitHub RPG](https://gitrpg.onrender.com/card/lazzerex.svg)
+
+![GitHub RPG Stats](https://gitrpg.onrender.com/card/lazzerex.svg?style=stats)
+
+![GitHub RPG Chart](https://gitrpg.onrender.com/card/lazzerex.svg?style=chart)
 
 ## Features
 
