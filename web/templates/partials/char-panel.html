@@ -67,11 +67,12 @@
 
         <div style="display:flex;align-items:center;justify-content:space-between;border-top:4px solid var(--border);padding-top:16px;gap:12px;flex-wrap:wrap;">
             <p style="color:var(--muted);font-size:7px;">LAST SYNC: {{fmtAge .Character.UpdatedAt}}</p>
-            <form hx-post="/sync">
-                <button type="submit" class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+            <div id="sync-status">
+                <button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML"
+                        class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
                     <i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW
                 </button>
-            </form>
+            </div>
         </div>
 
     </div>
