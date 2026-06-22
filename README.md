@@ -190,6 +190,17 @@ Compact badge:
 ```
 
 
+## Credits
+
+| Asset | Author | License |
+|---|---|---|
+| [KayKit Adventurers Character Pack 2.0](https://kaylousberg.itch.io/kaykit-adventurers) | Kay Lousberg (kaylousberg.com) | CC0 1.0 |
+| [Kyrise's Free 16x16 RPG Icon Pack v1.3](https://kyrise.itch.io/kyrises-free-16x16-rpg-icon-pack) | Kyrise | CC BY 4.0 |
+| Free Cute Tileset | itch.io | - |
+| [Tiny RPG Character Asset Pack v1.03](https://pixel-boy.itch.io/tiny-rpg-character-asset-pack) | Pixel-Boy | Free |
+
+KayKit 3D models power the character viewer. Kyrise icons appear in the stat grid. FreeCuteTileset provides sky and hills backgrounds. Tiny RPG sprites are the flanking soldier and orc on the landing page.
+
 ## Project Structure
 
 ```
