@@ -7,11 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { zoom: 1.15; }
 
         :root {
             --bg:         #050010;
@@ -30,12 +35,95 @@
 
         html, body {
             min-height: 100vh;
-            background: var(--bg);
+            background-color: var(--bg);
             color: var(--text);
             font-family: 'Press Start 2P', monospace;
             font-size: 10px;
             line-height: 1.8;
         }
+
+        #rpg-bg {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        #rpg-tile {
+            position: absolute;
+            inset: 0;
+            background-image: url('/static/assets/tiles/stone_dark.png');
+            background-repeat: repeat;
+            background-size: 32px 32px;
+            image-rendering: pixelated;
+            opacity: 0.06;
+        }
+
+        #rpg-stars {
+            position: absolute;
+            inset: 0;
+        }
+        #rpg-stars::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 2px; height: 2px;
+            background: transparent;
+            border-radius: 50%;
+            box-shadow: 1319px 119px 0 1px rgba(230,215,255,0.27), 467px 147px 0 0px rgba(200,240,255,0.8), 75px 35px 0 0px rgba(215,200,255,0.32), 1159px 208px 0 0px rgba(255,215,255,0.79), 929px 608px 0 0px rgba(200,215,255,0.46), 1439px 437px 0 0px rgba(215,215,255,0.51), 1573px 349px 0 0px rgba(255,200,255,0.33), 745px 357px 0 0px rgba(200,240,255,0.7), 1108px 132px 0 0px rgba(255,200,255,0.98), 1140px 305px 0 0px rgba(230,215,255,0.87), 1452px 76px 0 1px rgba(215,225,255,0.28), 173px 243px 0 0px rgba(255,225,255,0.9), 938px 655px 0 0px rgba(215,225,255,0.88), 737px 219px 0 0px rgba(200,215,255,0.75), 1103px 255px 0 0px rgba(255,225,255,0.37), 1320px 575px 0 0px rgba(230,200,255,0.41), 479px 37px 0 0px rgba(255,225,255,0.85), 145px 221px 0 0px rgba(230,215,255,0.93), 1352px 516px 0 0px rgba(255,215,255,0.55), 552px 147px 0 0px rgba(230,240,255,0.43), 1848px 602px 0 1px rgba(215,215,255,0.55), 1053px 510px 0 0px rgba(200,200,255,0.32), 323px 647px 0 0px rgba(255,200,255,0.37), 798px 395px 0 0px rgba(255,225,255,0.7), 1143px 16px 0 0px rgba(200,225,255,0.76), 1584px 661px 0 0px rgba(230,240,255,0.51), 333px 469px 0 0px rgba(230,215,255,0.25), 1049px 113px 0 0px rgba(230,215,255,0.9), 323px 387px 0 0px rgba(200,225,255,0.82), 1010px 24px 0 0px rgba(230,225,255,0.33), 500px 64px 0 1px rgba(200,200,255,0.43), 1508px 502px 0 0px rgba(215,215,255,0.86), 1361px 491px 0 0px rgba(215,225,255,0.96), 1090px 626px 0 0px rgba(215,215,255,0.57), 1470px 324px 0 0px rgba(230,240,255,0.55), 1852px 534px 0 0px rgba(215,215,255,0.59), 141px 351px 0 0px rgba(215,215,255,0.27), 24px 77px 0 0px rgba(200,215,255,0.78), 148px 37px 0 0px rgba(200,215,255,0.89), 580px 502px 0 0px rgba(215,240,255,0.41), 507px 489px 0 1px rgba(215,200,255,0.86), 208px 679px 0 0px rgba(255,240,255,0.57), 966px 60px 0 0px rgba(200,200,255,0.76), 834px 352px 0 0px rgba(200,215,255,0.85), 402px 199px 0 0px rgba(215,240,255,0.65), 385px 290px 0 0px rgba(200,240,255,0.6), 1664px 568px 0 0px rgba(200,200,255,0.32), 1553px 247px 0 0px rgba(255,240,255,0.37), 447px 415px 0 0px rgba(215,240,255,0.93), 14px 404px 0 0px rgba(255,225,255,0.45), 876px 574px 0 1px rgba(255,215,255,0.75), 398px 308px 0 0px rgba(200,200,255,0.41), 1541px 326px 0 0px rgba(255,215,255,0.29), 126px 525px 0 0px rgba(215,200,255,0.31), 1228px 74px 0 0px rgba(215,240,255,0.76), 255px 588px 0 0px rgba(200,200,255,0.43), 868px 678px 0 0px rgba(230,225,255,0.69), 428px 326px 0 0px rgba(255,215,255,0.43), 1385px 665px 0 0px rgba(230,200,255,0.47), 29px 474px 0 0px rgba(200,200,255,0.72), 1111px 223px 0 1px rgba(215,225,255,0.63), 1814px 75px 0 0px rgba(230,225,255,0.91), 333px 453px 0 0px rgba(230,200,255,0.88), 1377px 572px 0 0px rgba(200,215,255,0.47), 551px 123px 0 0px rgba(215,225,255,0.92), 587px 624px 0 0px rgba(230,215,255,0.41), 1417px 654px 0 0px rgba(255,225,255,0.89), 1864px 57px 0 0px rgba(255,225,255,0.32), 100px 8px 0 0px rgba(215,225,255,0.5), 340px 457px 0 0px rgba(255,200,255,0.66), 642px 188px 0 0px rgba(230,215,255,0.7), 987px 441px 0 0px rgba(200,240,255,0.6), 1723px 298px 0 0px rgba(255,215,255,0.8), 312px 156px 0 0px rgba(215,225,255,0.5), 1456px 89px 0 1px rgba(200,215,255,0.9), 78px 312px 0 0px rgba(230,225,255,0.6), 1891px 445px 0 0px rgba(215,200,255,0.7), 634px 567px 0 0px rgba(200,240,255,0.4), 1167px 34px 0 0px rgba(255,225,255,0.85), 423px 512px 0 0px rgba(230,215,255,0.6), 1534px 178px 0 0px rgba(200,215,255,0.75), 267px 423px 0 0px rgba(215,240,255,0.5), 1089px 556px 0 0px rgba(255,200,255,0.65), 845px 89px 0 0px rgba(230,225,255,0.8), 1678px 367px 0 0px rgba(200,200,255,0.4), 156px 534px 0 0px rgba(215,215,255,0.55), 1234px 423px 0 0px rgba(255,240,255,0.7), 789px 178px 0 0px rgba(230,200,255,0.6), 1345px 289px 0 0px rgba(200,225,255,0.85), 534px 67px 0 0px rgba(215,215,255,0.45), 1756px 512px 0 0px rgba(230,240,255,0.6), 423px 345px 0 0px rgba(255,215,255,0.7), 1189px 678px 0 0px rgba(200,240,255,0.35), 678px 234px 0 1px rgba(215,225,255,0.9), 1567px 89px 0 0px rgba(230,215,255,0.5), 89px 456px 0 0px rgba(200,215,255,0.65), 1834px 312px 0 0px rgba(255,225,255,0.4), 345px 178px 0 0px rgba(215,240,255,0.75), 1123px 345px 0 0px rgba(230,200,255,0.55), 567px 489px 0 0px rgba(200,225,255,0.7), 1789px 156px 0 0px rgba(215,215,255,0.85), 234px 567px 0 0px rgba(255,200,255,0.4), 712px 89px 0 0px rgba(200,240,255,0.75), 1289px 512px 0 0px rgba(215,225,255,0.5), 456px 234px 0 0px rgba(230,215,255,0.8), 1623px 678px 0 0px rgba(255,215,255,0.45), 89px 123px 0 0px rgba(200,215,255,0.65), 1934px 289px 0 0px rgba(215,240,255,0.55), 378px 456px 0 0px rgba(230,200,255,0.7), 1067px 67px 0 0px rgba(200,225,255,0.9), 645px 389px 0 0px rgba(215,215,255,0.4), 1512px 234px 0 1px rgba(230,240,255,0.8), 289px 512px 0 0px rgba(255,225,255,0.55), 1878px 89px 0 0px rgba(200,240,255,0.65), 534px 312px 0 0px rgba(215,200,255,0.7), 1234px 178px 0 0px rgba(230,215,255,0.85), 712px 534px 0 0px rgba(255,200,255,0.4), 156px 89px 0 0px rgba(215,240,255,0.75);
+            animation: rpg-twinkle-a 5s ease-in-out infinite;
+        }
+        #rpg-stars::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 1px; height: 1px;
+            background: transparent;
+            box-shadow: 239px 82px 0 1px rgba(215,200,255,0.96), 1719px 383px 0 0px rgba(215,240,255,0.69), 271px 47px 0 0px rgba(200,225,255,0.48), 440px 260px 0 0px rgba(230,240,255,0.75), 1281px 163px 0 0px rgba(215,215,255,0.94), 1648px 186px 0 0px rgba(200,215,255,0.91), 1518px 345px 0 0px rgba(255,215,255,0.84), 556px 168px 0 0px rgba(200,240,255,0.84), 1796px 44px 0 0px rgba(215,215,255,0.89), 1682px 476px 0 0px rgba(215,215,255,0.51), 58px 680px 0 1px rgba(230,225,255,0.39), 1780px 76px 0 0px rgba(230,225,255,0.98), 1323px 526px 0 0px rgba(230,200,255,0.55), 246px 272px 0 0px rgba(230,200,255,0.38), 232px 615px 0 0px rgba(230,240,255,0.58), 1251px 528px 0 0px rgba(215,225,255,0.34), 100px 451px 0 0px rgba(215,225,255,0.25), 893px 76px 0 0px rgba(230,225,255,0.96), 1368px 132px 0 0px rgba(230,225,255,0.79), 1375px 423px 0 0px rgba(230,215,255,0.49), 402px 435px 0 1px rgba(255,215,255,0.75), 1270px 587px 0 0px rgba(200,225,255,0.48), 597px 220px 0 0px rgba(230,240,255,0.57), 914px 457px 0 0px rgba(255,215,255,0.76), 1359px 91px 0 0px rgba(230,200,255,0.46), 1686px 245px 0 0px rgba(215,215,255,0.75), 311px 30px 0 0px rgba(255,200,255,0.28), 942px 429px 0 0px rgba(215,240,255,0.91), 1022px 414px 0 0px rgba(200,200,255,0.43), 1604px 440px 0 0px rgba(255,200,255,0.41), 623px 289px 0 0px rgba(215,225,255,0.7), 1234px 67px 0 0px rgba(230,240,255,0.85), 456px 445px 0 0px rgba(200,215,255,0.6), 1678px 312px 0 0px rgba(215,215,255,0.4), 89px 178px 0 0px rgba(230,225,255,0.75), 1456px 534px 0 0px rgba(255,200,255,0.55), 712px 123px 0 0px rgba(200,240,255,0.8), 1834px 389px 0 1px rgba(215,200,255,0.9), 345px 567px 0 0px rgba(230,215,255,0.45), 1089px 234px 0 0px rgba(200,225,255,0.65), 567px 678px 0 0px rgba(215,240,255,0.5), 1623px 89px 0 0px rgba(230,200,255,0.7), 234px 312px 0 0px rgba(255,215,255,0.6), 1178px 456px 0 0px rgba(200,200,255,0.8), 789px 178px 0 0px rgba(215,225,255,0.45), 1512px 623px 0 0px rgba(230,240,255,0.65), 423px 89px 0 0px rgba(255,225,255,0.7), 1289px 345px 0 0px rgba(200,215,255,0.55), 678px 512px 0 0px rgba(215,215,255,0.8), 1789px 178px 0 0px rgba(230,200,255,0.4), 156px 423px 0 0px rgba(200,240,255,0.65), 1934px 567px 0 0px rgba(215,225,255,0.5), 534px 234px 0 0px rgba(230,215,255,0.75), 1067px 89px 0 0px rgba(255,200,255,0.6), 289px 456px 0 0px rgba(200,225,255,0.85), 1345px 312px 0 0px rgba(215,240,255,0.4), 845px 678px 0 0px rgba(230,200,255,0.55), 1712px 123px 0 0px rgba(200,215,255,0.7), 378px 389px 0 0px rgba(215,215,255,0.8), 1456px 234px 0 0px rgba(230,225,255,0.45);
+            animation: rpg-twinkle-b 7s ease-in-out 2s infinite;
+        }
+        @keyframes rpg-twinkle-a {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+        @keyframes rpg-twinkle-b {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 0.15; }
+        }
+
+        #rpg-hills {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 100px;
+            background-image: url('/static/assets/env/bg_hills.png');
+            background-repeat: repeat-x;
+            background-position: bottom center;
+            background-size: 320px 192px;
+            image-rendering: pixelated;
+            filter: brightness(0.42) hue-rotate(150deg) saturate(2.5);
+        }
+
+        #rpg-clouds {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 192px;
+            background-image: url('/static/assets/env/bg_clouds.png');
+            background-repeat: repeat-x;
+            background-position: bottom center;
+            background-size: 320px 192px;
+            image-rendering: pixelated;
+            opacity: 0.25;
+            animation: rpg-clouds-drift 80s linear infinite;
+        }
+
+
+        @keyframes rpg-clouds-drift {
+            from { background-position-x: 0; }
+            to   { background-position-x: -640px; }
+        }
+
+        nav, main { position: relative; z-index: 1; }
 
         /* CRT scanline */
         body::after {
@@ -147,6 +235,10 @@
             0%   { transform: translateX(100%); }
             100% { transform: translateX(-100%); }
         }
+        @keyframes marquee-loop {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
         @keyframes spin-step {
             0%   { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -159,12 +251,55 @@
         .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
         .htmx-request .htmx-indicator,
         .htmx-request.htmx-indicator { opacity: 1; }
+
+        /* 8-bit interactive card */
+        .px-hoverable {
+            cursor: pointer;
+            transition: transform 0.06s, box-shadow 0.06s, border-color 0.08s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+        .px-hoverable:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 #000; border-color: var(--gold) !important; }
+        .px-hoverable:active { transform: translate(2px,2px);   box-shadow: 2px 2px 0 #000; }
+
+        /* Class card hover */
+        .class-card:hover { border-color: var(--gold) !important; box-shadow: 4px 4px 0 #000; background: #0d0022 !important; }
+
+        /* 8-bit glitch for nav logo */
+        @keyframes px-glitch {
+            0%,88%,100% { text-shadow: 4px 4px 0 #000; transform: none; }
+            90%  { text-shadow: -2px 0 var(--red), 2px 0 var(--cyan); transform: translate(-1px,0); }
+            92%  { text-shadow: 2px 0 var(--purple), -2px 0 var(--gold); transform: translate(1px,0); }
+            94%  { text-shadow: 4px 4px 0 #000; transform: none; }
+        }
+        .px-glitch { animation: px-glitch 4s infinite; }
+
+        /* Pixel glow pulse */
+        @keyframes px-glow-pulse {
+            0%,100% { box-shadow: 4px 4px 0 #000; }
+            50%     { box-shadow: 4px 4px 0 #000, 0 0 14px var(--gold-dim); }
+        }
+        .px-glow { animation: px-glow-pulse 2.5s ease-in-out infinite; }
+
+        /* Section entrance */
+        @keyframes px-enter {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .px-enter { animation: px-enter 0.3s ease-out both; }
     </style>
 </head>
 <body>
+    <div id="rpg-bg" aria-hidden="true">
+        <div id="rpg-tile"></div>
+        <div id="rpg-stars"></div>
+        <div id="rpg-clouds"></div>
+        <div id="rpg-hills"></div>
+    </div>
     <nav hx-boost="true" style="background: var(--panel); border-bottom: 4px solid var(--border); position: sticky; top: 0; z-index: 100;">
         <div style="max-width: 880px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;">
-            <a href="/" style="color: var(--gold); font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+            <a href="/" class="px-glitch" style="color: var(--gold); font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px;">
                 <i data-lucide="sword" style="width:16px;height:16px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
                 GITHUB RPG
             </a>
@@ -175,7 +310,7 @@
                     </a>
                     <a href="/logout" style="color: var(--muted); font-size: 8px; text-decoration: none;">LOGOUT</a>
                 {{else}}
-                    <a href="/auth/github" class="px-btn px-btn-gold" style="font-size: 8px; padding: 8px 14px;">LOGIN</a>
+                    <a href="/auth/github" class="px-btn px-btn-gold" style="font-size: 8px; padding: 8px 14px;" hx-boost="false">LOGIN</a>
                 {{end}}
             </div>
         </div>
