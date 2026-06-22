@@ -3,45 +3,222 @@
 {{define "title"}}GitHub RPG — Your GitHub Activity, Transformed{{end}}
 
 {{define "content"}}
-<div class="max-w-4xl mx-auto px-4 py-20 text-center">
+<div style="max-width: 880px; margin: 0 auto; padding: 56px 16px 80px;">
 
-    <h1 class="text-5xl font-bold text-white mb-4 tracking-tight">Your GitHub, as an RPG</h1>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">
-        Connect GitHub. Earn XP from commits, PRs, and reviews. Get a character class and a README card.
-    </p>
+    <!-- Hero -->
+    <div style="text-align: center; margin-bottom: 72px;">
+        <div class="float" style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; border: 4px solid var(--gold); background: var(--panel); box-shadow: 4px 4px 0 #000; margin-bottom: 28px;">
+            <i data-lucide="sword" style="width:40px;height:40px;stroke:var(--gold);stroke-width:1.5;"></i>
+        </div>
 
-    <div class="flex flex-wrap gap-3 justify-center mb-16">
-        {{if .User}}
-        <a href="/profile" class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold text-lg hover:bg-indigo-500 transition-colors">
-            View Your Character
-        </a>
-        {{else}}
-        <a href="/auth/github" class="inline-block bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors">
-            Login with GitHub
-        </a>
+        <h1 style="color: var(--gold); font-size: clamp(20px,4vw,34px); text-shadow: 4px 4px 0 #000; margin-bottom: 20px; line-height: 1.4;">
+            YOUR GITHUB<br>AS AN RPG
+        </h1>
+
+        <p style="color: var(--cyan); font-size: 9px; margin-bottom: 48px; letter-spacing: 1px;">
+            &gt; COMMIT. LEVEL UP. CONQUER._
+        </p>
+
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px;">
+            {{if .User}}
+            <a href="/profile" class="px-btn px-btn-green" style="display:inline-flex;align-items:center;gap:8px;">
+                <i data-lucide="user" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>MY CHARACTER
+            </a>
+            {{else}}
+            <a href="/auth/github" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
+                <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START QUEST
+            </a>
+            {{end}}
+            <a href="/cards" class="px-btn px-btn-cyan" style="display:inline-flex;align-items:center;gap:8px;">
+                <i data-lucide="id-card" style="width:14px;height:14px;stroke:var(--cyan);stroke-width:2;"></i>PREVIEW CARD
+            </a>
+        </div>
+
+        {{if not .User}}
+        <p class="blink" style="color: var(--muted); font-size: 8px; letter-spacing: 1px;">
+            &#9733; CONNECT GITHUB TO BEGIN YOUR QUEST &#9733;
+        </p>
         {{end}}
-        <a href="/cards" class="inline-block bg-gray-800 text-gray-200 px-6 py-3 rounded-lg font-semibold text-lg hover:bg-gray-700 transition-colors">
-            Preview a Card
-        </a>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Character</p>
-            <p class="text-white font-semibold mb-1">Level up your profile</p>
-            <p class="text-sm text-gray-400">Earn XP from commits, PRs, reviews, and issues. Level up as you contribute.</p>
+    <!-- Demo character panel -->
+    <div class="px-panel-gold" style="max-width: 500px; margin: 0 auto 72px; padding: 28px;">
+        <p style="color: var(--gold); font-size: 8px; text-align: center; margin-bottom: 24px; letter-spacing: 2px;">
+            &#9670; EXAMPLE CHARACTER &#9670;
+        </p>
+
+        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
+            <div class="float" style="display:flex;align-items:center;justify-content:center;width:64px;height:64px;border:4px solid var(--gold);background:#000;box-shadow:4px 4px 0 #000;flex-shrink:0;">
+                <i data-lucide="shield" id="demo-class-icon" style="width:32px;height:32px;stroke:var(--gold);stroke-width:1.5;"></i>
+            </div>
+            <div>
+                <p style="color: #fff; font-size: 13px; margin-bottom: 8px; text-shadow: 2px 2px 0 #000;">OCTOCAT</p>
+                <p style="color: var(--green); font-size: 9px; margin-bottom: 6px;" id="demo-class-label">LVL 27 GUARDIAN</p>
+                <p style="color: var(--muted); font-size: 8px;">The Architect</p>
+            </div>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Stats</p>
-            <p class="text-white font-semibold mb-1">STR · INT · WIS · DEX · CHA</p>
-            <p class="text-sm text-gray-400">Five stats calculated from your activity. Earn a class based on your primary language.</p>
+
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; color: var(--muted); font-size: 7px; margin-bottom: 6px;">
+                <span>12,450 XP</span><span>73% &#8594; LVL 28</span>
+            </div>
+            <div class="xp-track"><div class="xp-fill" id="demo-xp" style="width:0%;"></div></div>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">README Card</p>
-            <p class="text-white font-semibold mb-1">Show off in your profile</p>
-            <p class="text-sm text-gray-400">SVG card updates automatically. Drop one line into your README and you're done.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:20px;">
+            <div class="stat-box"><p style="color:var(--muted);font-size:6px;margin-bottom:5px;">POWER</p><p style="color:#fff;font-size:12px;" data-demo="82">0</p></div>
+            <div class="stat-box"><p style="color:var(--muted);font-size:6px;margin-bottom:5px;">INTELLECT</p><p style="color:#fff;font-size:12px;" data-demo="91">0</p></div>
+            <div class="stat-box"><p style="color:var(--muted);font-size:6px;margin-bottom:5px;">WISDOM</p><p style="color:#fff;font-size:12px;" data-demo="42">0</p></div>
+            <div class="stat-box"><p style="color:var(--muted);font-size:6px;margin-bottom:5px;">AGILITY</p><p style="color:#fff;font-size:12px;" data-demo="57">0</p></div>
+            <div class="stat-box"><p style="color:var(--muted);font-size:6px;margin-bottom:5px;">INFLUENCE</p><p style="color:#fff;font-size:12px;" data-demo="33">0</p></div>
         </div>
+
+        <div style="text-align:center;">
+            <button onclick="rollStats()" class="px-btn" style="font-size:7px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+                <i data-lucide="dices" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>ROLL STATS
+            </button>
+        </div>
+    </div>
+
+    <!-- Feature grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:64px;">
+
+        <div class="px-panel" style="padding:22px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <i data-lucide="user" style="width:18px;height:18px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
+                <p style="color:var(--gold);font-size:7px;letter-spacing:2px;">CHARACTER</p>
+            </div>
+            <p style="color:#fff;font-size:10px;margin-bottom:12px;">LEVEL UP YOUR PROFILE</p>
+            <p style="color:var(--muted);font-size:8px;line-height:2.2;">Earn XP from commits, PRs, reviews. Unlock titles and classes as you grow.</p>
+        </div>
+
+        <div class="px-panel" style="padding:22px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <i data-lucide="bar-chart-2" style="width:18px;height:18px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
+                <p style="color:var(--gold);font-size:7px;letter-spacing:2px;">STATS</p>
+            </div>
+            <p style="color:#fff;font-size:10px;margin-bottom:12px;">POWER&#183;INTELLECT&#183;WISDOM</p>
+            <p style="color:var(--muted);font-size:8px;line-height:2.2;">5 stats from your GitHub activity. Class assigned by your primary language.</p>
+        </div>
+
+        <div class="px-panel-cyan" style="padding:22px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <i data-lucide="id-card" style="width:18px;height:18px;stroke:var(--cyan);stroke-width:2;flex-shrink:0;"></i>
+                <p style="color:var(--cyan);font-size:7px;letter-spacing:2px;">README CARD</p>
+            </div>
+            <p style="color:#fff;font-size:10px;margin-bottom:12px;">SHOW OFF YOUR PROGRESS</p>
+            <p style="color:var(--muted);font-size:8px;line-height:2.2;">Auto-updating SVG card. Drop one line into your GitHub README.</p>
+        </div>
+
+    </div>
+
+    <!-- Class roster -->
+    <div class="px-panel" style="padding:28px;margin-bottom:64px;">
+        <p style="color:var(--gold);font-size:8px;letter-spacing:2px;margin-bottom:8px;">[ CLASS ROSTER ]</p>
+        <p style="color:var(--muted);font-size:7px;margin-bottom:24px;line-height:2;">YOUR CLASS IS DETERMINED BY YOUR PRIMARY LANGUAGE.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;" id="class-grid">
+            <div class="class-card" data-class="guardian" onclick="selectClass(this)" style="border:4px solid var(--border);background:#000;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color 0.1s,box-shadow 0.1s;">
+                <i data-lucide="shield" style="width:22px;height:22px;stroke:#00add8;stroke-width:2;margin:0 auto 8px;display:block;"></i>
+                <p style="color:#00add8;font-size:7px;margin-bottom:4px;">GUARDIAN</p>
+                <p style="color:var(--muted);font-size:6px;">Go</p>
+            </div>
+            <div class="class-card" data-class="berserker" onclick="selectClass(this)" style="border:4px solid var(--border);background:#000;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color 0.1s,box-shadow 0.1s;">
+                <i data-lucide="zap" style="width:22px;height:22px;stroke:#e05d44;stroke-width:2;margin:0 auto 8px;display:block;"></i>
+                <p style="color:#e05d44;font-size:7px;margin-bottom:4px;">BERSERKER</p>
+                <p style="color:var(--muted);font-size:6px;">Rust</p>
+            </div>
+            <div class="class-card" data-class="paladin" onclick="selectClass(this)" style="border:4px solid var(--border);background:#000;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color 0.1s,box-shadow 0.1s;">
+                <i data-lucide="shield-check" style="width:22px;height:22px;stroke:#3178c6;stroke-width:2;margin:0 auto 8px;display:block;"></i>
+                <p style="color:#3178c6;font-size:7px;margin-bottom:4px;">PALADIN</p>
+                <p style="color:var(--muted);font-size:6px;">TypeScript</p>
+            </div>
+            <div class="class-card" data-class="rogue" onclick="selectClass(this)" style="border:4px solid var(--border);background:#000;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color 0.1s,box-shadow 0.1s;">
+                <i data-lucide="terminal" style="width:22px;height:22px;stroke:#e8c94a;stroke-width:2;margin:0 auto 8px;display:block;"></i>
+                <p style="color:#e8c94a;font-size:7px;margin-bottom:4px;">ROGUE</p>
+                <p style="color:var(--muted);font-size:6px;">JavaScript</p>
+            </div>
+            <div class="class-card" data-class="sage" onclick="selectClass(this)" style="border:4px solid var(--border);background:#000;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color 0.1s,box-shadow 0.1s;">
+                <i data-lucide="brain" style="width:22px;height:22px;stroke:#4b8bbe;stroke-width:2;margin:0 auto 8px;display:block;"></i>
+                <p style="color:#4b8bbe;font-size:7px;margin-bottom:4px;">SAGE</p>
+                <p style="color:var(--muted);font-size:6px;">Python</p>
+            </div>
+            <div class="class-card" data-class="knight" onclick="selectClass(this)" style="border:4px solid var(--border);background:#000;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color 0.1s,box-shadow 0.1s;">
+                <i data-lucide="swords" style="width:22px;height:22px;stroke:#9b72cf;stroke-width:2;margin:0 auto 8px;display:block;"></i>
+                <p style="color:#9b72cf;font-size:7px;margin-bottom:4px;">KNIGHT</p>
+                <p style="color:var(--muted);font-size:6px;">C#</p>
+            </div>
+        </div>
+
+        <div id="class-desc" style="margin-top:16px;padding:14px;border:4px solid var(--border);background:#000;display:none;min-height:56px;">
+            <p id="class-desc-text" style="color:var(--muted);font-size:8px;line-height:2;"></p>
+        </div>
+    </div>
+
+    <!-- Ticker -->
+    <div style="overflow:hidden;border-top:4px solid var(--border);border-bottom:4px solid var(--border);padding:10px 0;background:var(--panel);">
+        <p style="color:var(--muted);font-size:7px;white-space:nowrap;animation:marquee 22s linear infinite;display:inline-block;padding-left:100%;">
+            &#9670; COMMIT XP +10 &nbsp;&nbsp;&nbsp; &#9670; PULL REQUEST MERGED XP +100 &nbsp;&nbsp;&nbsp; &#9670; ACHIEVEMENT UNLOCKED: FIRST COMMIT &nbsp;&nbsp;&nbsp; &#9670; LEVEL UP! &nbsp;&nbsp;&nbsp; &#9670; NEW CLASS: GUARDIAN &nbsp;&nbsp;&nbsp; &#9670; STREAK +1 DAY &nbsp;&nbsp;&nbsp; &#9670; REPOSITORY CREATED &nbsp;&nbsp;&nbsp; &#9670; CODE REVIEW SUBMITTED &nbsp;&nbsp;&nbsp; &#9670; STAR RECEIVED XP +5
+        </p>
     </div>
 
 </div>
+
+<script>
+var classDescs = {
+    guardian:  'RELIABLE DEFENDER. GO ENGINEERS BUILD SCALABLE SYSTEMS WITH PRECISION AND DISCIPLINE.',
+    berserker: 'UNSTOPPABLE FORCE. RUST WARRIORS CONQUER MEMORY AND PERFORMANCE FEARLESSLY.',
+    paladin:   'CODE WITH HONOR. TYPESCRIPT PALADINS BRING ORDER TO DYNAMIC SYSTEMS.',
+    rogue:     'MOVE FAST. JAVASCRIPT ROGUES SHIP FEATURES AT THE SPEED OF THOUGHT.',
+    sage:      'DATA SORCERER. PYTHON SAGES WIELD ALGORITHMS AND MACHINE LEARNING AS SPELLS.',
+    knight:    'ENTERPRISE WARRIOR. C# KNIGHTS UPHOLD THE REALM WITH STRUCTURED MIGHT.'
+};
+
+function selectClass(el) {
+    document.querySelectorAll('.class-card').forEach(function(c) {
+        c.style.borderColor = 'var(--border)';
+        c.style.boxShadow = '';
+    });
+    el.style.borderColor = 'var(--gold)';
+    el.style.boxShadow = '4px 4px 0 #000';
+    var desc = document.getElementById('class-desc');
+    document.getElementById('class-desc-text').textContent = classDescs[el.dataset.class] || '';
+    desc.style.display = 'block';
+}
+
+(function () {
+    function counter(el, target, ms) {
+        var s = performance.now();
+        function tick(now) {
+            var p = Math.min((now - s) / ms, 1);
+            el.textContent = Math.floor(p * target);
+            if (p < 1) requestAnimationFrame(tick);
+            else el.textContent = target;
+        }
+        requestAnimationFrame(tick);
+    }
+
+    document.querySelectorAll('[data-demo]').forEach(function(el) {
+        counter(el, parseInt(el.dataset.demo, 10), 1400);
+    });
+
+    var bar = document.getElementById('demo-xp');
+    if (bar) requestAnimationFrame(function() { requestAnimationFrame(function() { bar.style.width = '73%'; }); });
+})();
+
+function rollStats() {
+    var els = document.querySelectorAll('[data-demo]');
+    els.forEach(function(el) {
+        var target = Math.floor(Math.random() * 60) + 30;
+        var start = performance.now();
+        function tick(now) {
+            var p = Math.min((now - start) / 600, 1);
+            el.textContent = Math.floor(p * target);
+            if (p < 1) requestAnimationFrame(tick);
+            else el.textContent = target;
+        }
+        requestAnimationFrame(tick);
+    });
+}
+</script>
 {{end}}
