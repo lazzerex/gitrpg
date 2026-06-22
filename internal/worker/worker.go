@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/lazzerex/gitrpg/internal/achievements"
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/stats"
@@ -13,19 +14,21 @@ import (
 
 // Worker runs background GitHub sync and character computation jobs.
 type Worker struct {
-	github     *github.Service
-	characters *characters.Service
-	userStore  *users.Store
-	logger     *slog.Logger
+	github       *github.Service
+	characters   *characters.Service
+	achievements *achievements.Service
+	userStore    *users.Store
+	logger       *slog.Logger
 }
 
 // New creates a Worker.
-func New(githubSvc *github.Service, charSvc *characters.Service, userStore *users.Store, logger *slog.Logger) *Worker {
+func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, userStore *users.Store, logger *slog.Logger) *Worker {
 	return &Worker{
-		github:     githubSvc,
-		characters: charSvc,
-		userStore:  userStore,
-		logger:     logger,
+		github:       githubSvc,
+		characters:   charSvc,
+		achievements: achSvc,
+		userStore:    userStore,
+		logger:       logger,
 	}
 }
 
@@ -81,6 +84,10 @@ func (w *Worker) SyncUser(user *users.User) {
 		if err := w.characters.Upsert(ctx, char); err != nil {
 			w.logger.Error("character upsert failed", "user_id", user.ID, "error", err)
 			return
+		}
+
+		if err := w.achievements.EvaluateAndSave(ctx, user.ID, gs); err != nil {
+			w.logger.Error("achievement eval failed", "user_id", user.ID, "error", err)
 		}
 
 		w.logger.Info("sync complete",
