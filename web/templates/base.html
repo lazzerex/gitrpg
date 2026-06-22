@@ -1,35 +1,181 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-950">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{block "title" .}}GitHub RPG{{end}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        gray: {
-                            950: '#0a0a0f',
-                        }
-                    }
-                }
-            }
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:         #050010;
+            --panel:      #0a001a;
+            --gold:       #FFD700;
+            --gold-dim:   #B8860B;
+            --green:      #00FF41;
+            --cyan:       #00E5FF;
+            --red:        #FF5555;
+            --purple:     #CC44FF;
+            --border:     #3A1A7A;
+            --border-hi:  #6633CC;
+            --text:       #EDE8FF;
+            --muted:      #AA88DD;
         }
-    </script>
+
+        html, body {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            line-height: 1.8;
+        }
+
+        /* CRT scanline */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg, transparent 0px, transparent 2px,
+                rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Panels */
+        .px-panel       { background: var(--panel); border: 4px solid var(--border); box-shadow: 4px 4px 0 #000; }
+        .px-panel-gold  { background: var(--panel); border: 4px solid var(--gold);   box-shadow: 4px 4px 0 #000; }
+        .px-panel-cyan  { background: var(--panel); border: 4px solid var(--cyan);   box-shadow: 4px 4px 0 #000; }
+        .px-panel-red   { background: rgba(255,85,85,0.08); border: 4px solid var(--red); box-shadow: 4px 4px 0 #000; }
+
+        /* Buttons */
+        .px-btn {
+            display: inline-block;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 9px;
+            padding: 10px 20px;
+            border: 4px solid var(--gold);
+            box-shadow: 4px 4px 0 #000;
+            background: var(--panel);
+            color: var(--gold);
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.06s, box-shadow 0.06s;
+            user-select: none;
+            line-height: 1;
+        }
+        .px-btn:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 #000; }
+        .px-btn:active { transform: translate(2px,2px);   box-shadow: 2px 2px 0 #000; }
+
+        .px-btn-gold  { background: var(--gold);   color: #050010; border-color: var(--gold); }
+        .px-btn-green { background: var(--green);  color: #050010; border-color: var(--green); }
+        .px-btn-cyan  { border-color: var(--cyan); color: var(--cyan); background: var(--panel); }
+        .px-btn-red   { border-color: var(--red);  color: var(--red);  background: var(--panel); }
+        .px-btn-gold:hover, .px-btn-green:hover { color: #050010; }
+
+        /* XP bar */
+        .xp-track { height: 16px; background: #000; border: 4px solid var(--border); overflow: hidden; }
+        .xp-fill  { height: 100%; background: var(--green); transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+        /* Stat box */
+        .stat-box { background: #000; border: 4px solid var(--border); padding: 10px 4px; text-align: center; }
+
+        /* Achievement cells */
+        .ach-base     { padding: 14px 8px; text-align: center; background: #080018; }
+        .ach-earned   { }
+        .ach-locked   { border: 4px solid #180830; box-shadow: 2px 2px 0 #000; opacity: 0.35; filter: grayscale(0.9); }
+        .ach-common   { border: 4px solid var(--border-hi); box-shadow: 4px 4px 0 #000; }
+        .ach-rare     { border: 4px solid var(--cyan);      box-shadow: 4px 4px 0 #000; }
+        .ach-legendary { border: 4px solid var(--gold);    box-shadow: 0 0 10px var(--gold-dim), 4px 4px 0 #000; }
+
+        /* Lucide icon sizing inside achievement cells */
+        .ach-base svg { display: block; margin: 0 auto 10px; width: 28px; height: 28px; stroke-width: 1.5; }
+
+        /* Pixel input */
+        .px-input {
+            background: #000;
+            border: 4px solid var(--border);
+            color: var(--text);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 9px;
+            padding: 10px 14px;
+            width: 100%;
+            outline: none;
+        }
+        .px-input:focus { border-color: var(--gold); }
+        .px-input::placeholder { color: var(--border-hi); }
+
+        /* Code block */
+        .px-code {
+            background: #000;
+            border: 4px solid var(--border);
+            padding: 12px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            color: var(--cyan);
+            word-break: break-all;
+            line-height: 2;
+        }
+
+        /* Lucide icons in buttons/nav */
+        nav a svg, .px-btn svg { display: inline; width: 14px; height: 14px; vertical-align: middle; stroke-width: 2; margin-right: 4px; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar       { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+        /* Animations */
+        @keyframes float {
+            0%,100% { transform: translateY(0); }
+            50%     { transform: translateY(-10px); }
+        }
+        @keyframes blink {
+            0%,49% { opacity: 1; }
+            50%,100% { opacity: 0; }
+        }
+        @keyframes marquee {
+            0%   { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        @keyframes spin-step {
+            0%   { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .float { animation: float 3s ease-in-out infinite; }
+        .blink { animation: blink 1s step-end infinite; }
+
+        /* HTMX loading indicator */
+        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator { opacity: 1; }
+    </style>
 </head>
-<body class="h-full text-gray-100">
-    <nav class="border-b border-gray-800 bg-gray-900">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="text-lg font-bold text-white tracking-tight">GitHub RPG</a>
-            <div>
+<body>
+    <nav hx-boost="true" style="background: var(--panel); border-bottom: 4px solid var(--border); position: sticky; top: 0; z-index: 100;">
+        <div style="max-width: 880px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;">
+            <a href="/" style="color: var(--gold); font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="sword" style="width:16px;height:16px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
+                GITHUB RPG
+            </a>
+            <div style="display: flex; gap: 20px; align-items: center;">
                 {{if .User}}
-                    <a href="/profile" class="text-sm text-gray-400 hover:text-white mr-4">{{.User.Login}}</a>
-                    <a href="/logout" class="text-sm text-gray-400 hover:text-white">Logout</a>
+                    <a href="/profile" style="color: var(--cyan); font-size: 8px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="user" style="width:12px;height:12px;stroke:var(--cyan);stroke-width:2;"></i>{{.User.Login}}
+                    </a>
+                    <a href="/logout" style="color: var(--muted); font-size: 8px; text-decoration: none;">LOGOUT</a>
                 {{else}}
-                    <a href="/auth/github" class="text-sm bg-white text-gray-900 px-3 py-1.5 rounded font-medium hover:bg-gray-100">Login with GitHub</a>
+                    <a href="/auth/github" class="px-btn px-btn-gold" style="font-size: 8px; padding: 8px 14px;">LOGIN</a>
                 {{end}}
             </div>
         </div>
@@ -37,5 +183,9 @@
     <main>
         {{block "content" .}}{{end}}
     </main>
+    <script>
+        lucide.createIcons();
+        document.body.addEventListener('htmx:afterSettle', function() { lucide.createIcons(); });
+    </script>
 </body>
 </html>
