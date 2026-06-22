@@ -3,90 +3,108 @@
 {{define "title"}}{{.ProfileUser.Login}} — GitHub RPG{{end}}
 
 {{define "content"}}
-<div class="max-w-2xl mx-auto px-4 py-12">
+<div style="max-width:700px;margin:0 auto;padding:32px 16px 64px;">
 
     {{if .Character}}
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+    <div class="px-panel-gold" style="padding:28px;margin-bottom:20px;">
 
-        <div class="flex items-center gap-4 mb-6">
+        <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:28px;flex-wrap:wrap;">
             {{if .ProfileUser.AvatarURL}}
-            <img src="{{.ProfileUser.AvatarURL}}" alt="avatar" class="w-16 h-16 rounded-full border-2 border-gray-700">
+            <img src="{{.ProfileUser.AvatarURL}}" alt="avatar"
+                 style="width:80px;height:80px;border:4px solid var(--gold);box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
             {{end}}
-            <div>
-                <h1 class="text-2xl font-bold text-white">{{.ProfileUser.Login}}</h1>
-                <p class="font-medium" style="color: {{.AccentColor}}">Level {{.Character.Level}} {{.Character.Class}}</p>
-                <p class="text-gray-500 text-sm mt-0.5">{{.Character.Title}}</p>
+            <div style="flex:1;min-width:0;">
+                <p style="color:#fff;font-size:15px;margin-bottom:10px;text-shadow:3px 3px 0 #000;">{{.ProfileUser.Login}}</p>
+                <p style="font-size:10px;margin-bottom:8px;">
+                    <span style="color:var(--gold);">LVL {{.Character.Level}}</span>
+                    <span style="color:{{.AccentColor}};">&nbsp;{{.Character.Class}}</span>
+                </p>
+                <p style="color:var(--muted);font-size:8px;line-height:1.6;">{{.Character.Title}}</p>
             </div>
         </div>
 
-        <div class="mb-6">
-            <div class="flex justify-between text-xs text-gray-400 mb-1.5">
+        <div style="margin-bottom:28px;">
+            <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:7px;margin-bottom:8px;">
                 <span>{{.Character.TotalXP}} XP</span>
-                <span>{{.Character.XPIntoLevel}} / {{.Character.XPForLevel}} to level {{inc .Character.Level}}</span>
+                <span>{{.Character.XPIntoLevel}} / {{.Character.XPForLevel}} &#8594; LVL {{inc .Character.Level}}</span>
             </div>
-            <div class="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
-                <div id="xp-bar"
-                     class="h-2.5 rounded-full"
-                     style="background-color: {{.AccentColor}}; width: 0%; transition: width 1.2s cubic-bezier(0.4,0,0.2,1)"
-                     data-width="{{xpPercent .Character.XPIntoLevel .Character.XPForLevel}}">
-                </div>
+            <div class="xp-track">
+                <div id="xp-bar" class="xp-fill" style="width:0%;" data-width="{{xpPercent .Character.XPIntoLevel .Character.XPForLevel}}"></div>
             </div>
         </div>
 
-        <div class="grid grid-cols-5 gap-3">
-            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs font-semibold text-gray-400 mb-0.5">STR</p>
-                <p class="text-[10px] text-gray-600 mb-1">Strength</p>
-                <p class="text-xl font-bold text-white" data-stat="{{.Character.Strength}}">0</p>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+            <div class="stat-box">
+                <p style="color:var(--muted);font-size:6px;margin-bottom:6px;">POWER</p>
+                <p style="color:#fff;font-size:14px;" data-stat="{{.Character.Strength}}">0</p>
             </div>
-            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs font-semibold text-gray-400 mb-0.5">INT</p>
-                <p class="text-[10px] text-gray-600 mb-1">Intelligence</p>
-                <p class="text-xl font-bold text-white" data-stat="{{.Character.Intelligence}}">0</p>
+            <div class="stat-box">
+                <p style="color:var(--muted);font-size:6px;margin-bottom:6px;">INTELLECT</p>
+                <p style="color:#fff;font-size:14px;" data-stat="{{.Character.Intelligence}}">0</p>
             </div>
-            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs font-semibold text-gray-400 mb-0.5">WIS</p>
-                <p class="text-[10px] text-gray-600 mb-1">Wisdom</p>
-                <p class="text-xl font-bold text-white" data-stat="{{.Character.Wisdom}}">0</p>
+            <div class="stat-box">
+                <p style="color:var(--muted);font-size:6px;margin-bottom:6px;">WISDOM</p>
+                <p style="color:#fff;font-size:14px;" data-stat="{{.Character.Wisdom}}">0</p>
             </div>
-            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs font-semibold text-gray-400 mb-0.5">DEX</p>
-                <p class="text-[10px] text-gray-600 mb-1">Dexterity</p>
-                <p class="text-xl font-bold text-white" data-stat="{{.Character.Dexterity}}">0</p>
+            <div class="stat-box">
+                <p style="color:var(--muted);font-size:6px;margin-bottom:6px;">AGILITY</p>
+                <p style="color:#fff;font-size:14px;" data-stat="{{.Character.Dexterity}}">0</p>
             </div>
-            <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-                <p class="text-xs font-semibold text-gray-400 mb-0.5">CHA</p>
-                <p class="text-[10px] text-gray-600 mb-1">Charisma</p>
-                <p class="text-xl font-bold text-white" data-stat="{{.Character.Charisma}}">0</p>
+            <div class="stat-box">
+                <p style="color:var(--muted);font-size:6px;margin-bottom:6px;">INFLUENCE</p>
+                <p style="color:#fff;font-size:14px;" data-stat="{{.Character.Charisma}}">0</p>
             </div>
         </div>
 
     </div>
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-        <p class="text-xs text-gray-500 uppercase tracking-widest mb-4">README Card</p>
-        <img src="/card/{{.ProfileUser.Login}}.svg" alt="character card" class="w-full rounded mb-4">
-        <img src="/card/compact/{{.ProfileUser.Login}}.svg" alt="compact card" class="rounded mb-4">
-        <div class="bg-gray-800 rounded p-3">
-            <p class="text-xs text-gray-500 mb-1">Copy into your GitHub README:</p>
-            <code class="text-xs text-gray-300 break-all">![GitHub RPG]({{.BaseURL}}/card/{{.ProfileUser.Login}}.svg)</code>
+    {{if .Achievements}}
+    <div class="px-panel" style="padding:24px;margin-bottom:20px;">
+        <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ ACHIEVEMENTS ]</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            {{range .Achievements}}
+            {{if .Earned}}
+            <div class="ach-base ach-earned {{.AchClass}} {{.RarityColor}}">
+                <i data-lucide="{{.Icon}}"></i>
+                <p style="font-size:7px;line-height:1.8;margin-bottom:4px;">{{.Name}}</p>
+                <p style="font-size:6px;color:var(--muted);line-height:1.8;">{{.Description}}</p>
+            </div>
+            {{else}}
+            <div class="ach-base ach-locked">
+                <i data-lucide="{{.Icon}}" style="stroke:var(--border-hi);"></i>
+                <p style="font-size:7px;line-height:1.8;color:var(--muted);">{{.Name}}</p>
+            </div>
+            {{end}}
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+
+    <div class="px-panel" style="padding:24px;margin-bottom:20px;">
+        <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ README CARD ]</p>
+        <img src="/card/{{.ProfileUser.Login}}.svg" alt="character card"
+             style="width:100%;margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;display:block;">
+        <img src="/card/compact/{{.ProfileUser.Login}}.svg" alt="compact card"
+             style="margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;display:block;max-width:100%;">
+        <div class="px-code">
+            <span>![GitHub RPG]({{.BaseURL}}/card/{{.ProfileUser.Login}}.svg)</span>
         </div>
     </div>
 
     {{else}}
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-        <h1 class="text-xl font-bold text-white mb-2">{{.ProfileUser.Login}}</h1>
-        <p class="text-gray-400 text-sm">This user hasn't synced their character yet.</p>
+    <div class="px-panel" style="padding:48px 24px;text-align:center;">
+        <p style="color:#fff;font-size:13px;margin-bottom:14px;text-shadow:2px 2px 0 #000;">{{.ProfileUser.Login}}</p>
+        <p style="color:var(--muted);font-size:9px;line-height:2;">THIS ADVENTURER HASN'T SYNCED YET.</p>
     </div>
 
     {{end}}
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
-        <p class="text-gray-400 text-sm mb-4">Want your own RPG character?</p>
-        <a href="/auth/github" class="inline-block bg-white text-gray-900 px-5 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors">
-            Login with GitHub
+    <div class="px-panel" style="padding:28px;text-align:center;">
+        <p style="color:var(--muted);font-size:8px;margin-bottom:20px;line-height:2;">WANT YOUR OWN RPG CHARACTER?</p>
+        <a href="/auth/github" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
+            <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START YOUR QUEST
         </a>
     </div>
 
@@ -94,29 +112,21 @@
 
 <script>
 (function () {
-    function animateCounter(el, target, duration) {
-        var start = performance.now();
-        function step(now) {
-            var progress = Math.min((now - start) / duration, 1);
-            el.textContent = Math.floor(progress * target);
-            if (progress < 1) requestAnimationFrame(step);
+    function counter(el, target, ms) {
+        var s = performance.now();
+        function tick(now) {
+            var p = Math.min((now - s) / ms, 1);
+            el.textContent = Math.floor(p * target);
+            if (p < 1) requestAnimationFrame(tick);
             else el.textContent = target;
         }
-        requestAnimationFrame(step);
+        requestAnimationFrame(tick);
     }
-
-    document.querySelectorAll('[data-stat]').forEach(function (el) {
-        animateCounter(el, parseInt(el.dataset.stat, 10), 900);
+    document.querySelectorAll('[data-stat]').forEach(function(el) {
+        counter(el, parseInt(el.dataset.stat, 10), 900);
     });
-
     var bar = document.getElementById('xp-bar');
-    if (bar) {
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                bar.style.width = bar.dataset.width + '%';
-            });
-        });
-    }
+    if (bar) requestAnimationFrame(function() { requestAnimationFrame(function() { bar.style.width = bar.dataset.width + '%'; }); });
 })();
 </script>
 {{end}}
