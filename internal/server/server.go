@@ -160,6 +160,7 @@ func (s *Server) registerMiddleware() {
 }
 
 func (s *Server) registerRoutes() {
+	s.router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	s.router.Get("/health", s.handleHealth)
 	s.router.Get("/", s.handleIndex)
 
@@ -167,6 +168,7 @@ func (s *Server) registerRoutes() {
 	s.router.Get("/auth/github/callback", s.auth.Callback)
 	s.router.Get("/logout", s.auth.Logout)
 
+	s.router.Get("/card/demo", s.handleCardDemo)
 	s.router.Get("/card/{username}", s.handleCard)
 	s.router.Get("/card/compact/{username}", s.handleCardCompact)
 
@@ -181,7 +183,15 @@ func (s *Server) registerRoutes() {
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "index.html", s.baseData(r))
+	u, _ := r.Context().Value(users.ContextKey).(*users.User)
+	var charClass string
+	if u != nil {
+		char, err := s.characters.GetByUserID(r.Context(), u.ID)
+		if err == nil && char != nil {
+			charClass = char.Class
+		}
+	}
+	s.render(w, "index.html", indexData{User: u, CharClass: charClass})
 }
 
 func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
@@ -249,6 +259,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 type baseData struct {
 	User *users.User
+}
+
+type indexData struct {
+	User      *users.User
+	CharClass string
 }
 
 type profileData struct {
@@ -331,6 +346,17 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 			"request_id", middleware.GetReqID(r.Context()),
 		)
 	})
+}
+
+func (s *Server) handleCardDemo(w http.ResponseWriter, r *http.Request) {
+	class := r.URL.Query().Get("class")
+	svg, err := svgpkg.Demo(class)
+	if err != nil {
+		http.Error(w, "demo generation failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	s.svgResponse(w, svg)
 }
 
 func (s *Server) handleCard(w http.ResponseWriter, r *http.Request) {
