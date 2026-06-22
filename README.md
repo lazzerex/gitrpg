@@ -22,6 +22,7 @@ Commits earn XP. Repositories unlock classes. Every push levels you up.
 <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white"/>
 <img src="https://img.shields.io/badge/Goose-Migrations-4169E1?style=flat"/>
 <img src="https://img.shields.io/badge/GitHub_OAuth-181717?style=flat&logo=github&logoColor=white"/>
+<img src="https://img.shields.io/badge/Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white"/>
 
 
 </div>
