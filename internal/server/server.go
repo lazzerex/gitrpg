@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -37,6 +38,7 @@ type Server struct {
 	users        *users.Store
 	characters   *characters.Service
 	achievements *achievements.Service
+	syncStart    sync.Map // userID int64 → time.Time
 }
 
 func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, userStore *users.Store) *Server {
@@ -128,6 +130,17 @@ func (s *Server) LoadTemplates(dir string) error {
 	return nil
 }
 
+func (s *Server) renderPartial(w http.ResponseWriter, name string, data any) {
+	tmpl, ok := s.templates[name]
+	if !ok {
+		http.Error(w, "partial not found: "+name, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
+		s.logger.Error("partial render failed", "name", name, "error", err)
+	}
+}
 
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	tmpl, ok := s.templates[name]
@@ -168,6 +181,7 @@ func (s *Server) registerRoutes() {
 		r.Use(s.auth.RequireAuth)
 		r.Get("/profile", s.handleProfile)
 		r.Post("/sync", s.handleSync)
+		r.Get("/sync/status", s.handleSyncStatus)
 	})
 }
 
@@ -218,14 +232,55 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 	user, _ := r.Context().Value(users.ContextKey).(*users.User)
+	s.syncStart.Store(user.ID, time.Now())
 	s.worker.SyncUser(user)
-	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Redirect", "/profile")
-		w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, syncingHTML)
+}
+
+const syncingHTML = `<div id="sync-status" hx-get="/sync/status" hx-trigger="every 2s" hx-swap="outerHTML"><p class="blink" style="color:var(--gold);font-size:8px;letter-spacing:1px;">SYNCING...</p></div>`
+
+func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
+	user, _ := r.Context().Value(users.ContextKey).(*users.User)
+
+	startVal, ok := s.syncStart.Load(user.ID)
+	if !ok {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+	startTime := startVal.(time.Time)
+
+	if time.Since(startTime) > 3*time.Minute {
+		s.syncStart.Delete(user.ID)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, syncBtnHTML)
+		return
+	}
+
+	char, err := s.characters.GetByUserID(r.Context(), user.ID)
+	if err != nil || char == nil || !char.UpdatedAt.After(startTime) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, syncingHTML)
+		return
+	}
+
+	s.syncStart.Delete(user.ID)
+
+	accentColor := svgpkg.ClassColor(char.Class)
+	achs, _ := s.achievements.GetForUser(r.Context(), user.ID)
+
+	w.Header().Set("HX-Retarget", "#char-panel")
+	w.Header().Set("HX-Reswap", "outerHTML")
+	s.renderPartial(w, "char-panel", profileData{
+		User:        user,
+		Character:   char,
+		IsStale:     time.Since(char.UpdatedAt) > 12*time.Hour,
+		AccentColor: accentColor,
+		Achievements: achs,
+	})
 }
+
+const syncBtnHTML = `<div id="sync-status"><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW</button></div>`
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
