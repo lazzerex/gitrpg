@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/lazzerex/gitrpg/internal/achievements"
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/github"
@@ -66,12 +67,13 @@ func main() {
 	}
 	logger.Info("redis connected")
 
-	userStore := users.NewStore(db)
+	userStore := users.NewStore(db, cfg.Token.Key)
 	githubSvc := github.NewService(db, logger)
 	charSvc := characters.NewService(db, logger)
-	w := worker.New(githubSvc, charSvc, userStore, logger)
+	achSvc := achievements.NewService(db, logger)
+	w := worker.New(githubSvc, charSvc, achSvc, userStore, logger)
 
-	srv := server.New(cfg, db, rdb, logger, w, charSvc, userStore)
+	srv := server.New(cfg, db, rdb, logger, w, charSvc, achSvc, userStore)
 
 	if err := srv.LoadTemplates("web/templates"); err != nil {
 		logger.Error("template load failed", "error", err)
