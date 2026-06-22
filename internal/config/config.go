@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -12,6 +13,11 @@ type Config struct {
 	Redis    RedisConfig
 	GitHub   GitHubConfig
 	Session  SessionConfig
+	Token    TokenConfig
+}
+
+type TokenConfig struct {
+	Key []byte // 32 bytes for AES-256; nil disables encryption (dev only)
 }
 
 type ServerConfig struct {
@@ -39,6 +45,15 @@ type SessionConfig struct {
 }
 
 func Load() (*Config, error) {
+	var tokenKey []byte
+	if raw := getEnv("TOKEN_ENCRYPTION_KEY", ""); raw != "" {
+		k, err := hex.DecodeString(raw)
+		if err != nil {
+			return nil, fmt.Errorf("TOKEN_ENCRYPTION_KEY: must be hex string: %w", err)
+		}
+		tokenKey = k
+	}
+
 	cfg := &Config{
 		Server: ServerConfig{
 			Port: getEnv("PORT", "8080"),
@@ -59,6 +74,7 @@ func Load() (*Config, error) {
 			Secret: getEnv("SESSION_SECRET", ""),
 			MaxAge: getEnvInt("SESSION_MAX_AGE", 86400*30),
 		},
+		Token: TokenConfig{Key: tokenKey},
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -79,6 +95,12 @@ func (c *Config) validate() error {
 		if c.Session.Secret == "" {
 			return fmt.Errorf("SESSION_SECRET required in production")
 		}
+		if len(c.Token.Key) == 0 {
+			return fmt.Errorf("TOKEN_ENCRYPTION_KEY required in production")
+		}
+	}
+	if len(c.Token.Key) > 0 && len(c.Token.Key) != 32 {
+		return fmt.Errorf("TOKEN_ENCRYPTION_KEY must be 32 bytes (64 hex chars), got %d bytes", len(c.Token.Key))
 	}
 	return nil
 }
