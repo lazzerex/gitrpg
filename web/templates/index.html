@@ -1,48 +1,69 @@
 {{template "base.html" .}}
 
-{{define "title"}}GitHub RPG — Your GitHub Activity, Transformed{{end}}
+{{define "title"}}GitHub RPG, Transform Your GitHub Activity{{end}}
 
 {{define "content"}}
 <div style="max-width: 880px; margin: 0 auto; padding: 56px 16px 80px;">
 
     <!-- Hero -->
-    <div style="text-align: center; margin-bottom: 72px;">
-        <div class="float" style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; border: 4px solid var(--gold); background: var(--panel); box-shadow: 4px 4px 0 #000; margin-bottom: 28px;">
-            <i data-lucide="sword" style="width:40px;height:40px;stroke:var(--gold);stroke-width:1.5;"></i>
-        </div>
+    <div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:72px;">
 
-        <h1 style="color: var(--gold); font-size: clamp(20px,4vw,34px); text-shadow: 4px 4px 0 #000; margin-bottom: 20px; line-height: 1.4;">
-            YOUR GITHUB<br>AS AN RPG
-        </h1>
+        <!-- Left: text + CTA -->
+        <div style="flex:1;min-width:260px;text-align:center;display:flex;flex-direction:column;align-items:center;">
+            <div class="float" style="display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border:4px solid var(--gold);background:var(--panel);box-shadow:4px 4px 0 #000;margin-bottom:28px;">
+                <i data-lucide="sword" style="width:40px;height:40px;stroke:var(--gold);stroke-width:1.5;"></i>
+            </div>
 
-        <p style="color: var(--cyan); font-size: 9px; margin-bottom: 48px; letter-spacing: 1px;">
-            &gt; COMMIT. LEVEL UP. CONQUER._
-        </p>
+            <h1 style="color:var(--gold);font-size:clamp(20px,4vw,34px);text-shadow:4px 4px 0 #000;margin-bottom:20px;line-height:1.4;">
+                YOUR GITHUB<br>AS AN RPG
+            </h1>
 
-        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px;">
-            {{if .User}}
-            <a href="/profile" class="px-btn px-btn-green" style="display:inline-flex;align-items:center;gap:8px;">
-                <i data-lucide="user" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>MY CHARACTER
-            </a>
-            {{else}}
-            <a href="/auth/github" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
-                <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START QUEST
-            </a>
+            <p style="color:var(--cyan);font-size:9px;margin-bottom:48px;letter-spacing:1px;">
+                &gt; COMMIT. LEVEL UP. CONQUER._
+            </p>
+
+            <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:28px;">
+                {{if .User}}
+                <a href="/profile" class="px-btn px-btn-green" style="display:inline-flex;align-items:center;gap:8px;">
+                    <i data-lucide="user" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>MY CHARACTER
+                </a>
+                {{else}}
+                <a href="/auth/github" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
+                    <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START QUEST
+                </a>
+                {{end}}
+                <a href="/cards" class="px-btn px-btn-cyan" style="display:inline-flex;align-items:center;gap:8px;">
+                    <i data-lucide="id-card" style="width:14px;height:14px;stroke:var(--cyan);stroke-width:2;"></i>PREVIEW CARD
+                </a>
+            </div>
+
+            {{if not .User}}
+            <p class="blink" style="color:var(--muted);font-size:8px;letter-spacing:1px;">
+                &#9733; CONNECT GITHUB TO BEGIN YOUR QUEST &#9733;
+            </p>
             {{end}}
-            <a href="/cards" class="px-btn px-btn-cyan" style="display:inline-flex;align-items:center;gap:8px;">
-                <i data-lucide="id-card" style="width:14px;height:14px;stroke:var(--cyan);stroke-width:2;"></i>PREVIEW CARD
-            </a>
         </div>
 
-        {{if not .User}}
-        <p class="blink" style="color: var(--muted); font-size: 8px; letter-spacing: 1px;">
-            &#9733; CONNECT GITHUB TO BEGIN YOUR QUEST &#9733;
-        </p>
-        {{end}}
+        <!-- Right: 3D character portrait -->
+        <div style="flex:0 0 auto;margin:0 auto;">
+            <div id="char-portrait" data-class="{{.CharClass}}" style="border:4px solid var(--border);box-shadow:4px 4px 0 #000;background:var(--panel);position:relative;overflow:hidden;">
+                <canvas id="rpg-canvas" style="display:block;"></canvas>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:12px 8px 10px;text-align:center;">
+                    <p id="canvas-class-label" style="color:var(--gold);font-size:7px;letter-spacing:2px;">MAGE</p>
+                    <p style="color:var(--muted);font-size:6px;margin-top:3px;">YOUR CLASS AWAITS</p>
+                </div>
+                <div id="canvas-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--panel);">
+                    <p class="blink" style="color:var(--muted);font-size:7px;">LOADING...</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Demo character panel -->
-    <div class="px-panel-gold" style="max-width: 500px; margin: 0 auto 72px; padding: 28px;">
+    <!-- Demo character panel with idle guards -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:72px;">
+        <div class="rpg-sprite rpg-sprite--soldier"></div>
+    <div class="px-panel-gold" style="flex:1;max-width:460px;padding:28px;">
         <p style="color: var(--gold); font-size: 8px; text-align: center; margin-bottom: 24px; letter-spacing: 2px;">
             &#9670; EXAMPLE CHARACTER &#9670;
         </p>
@@ -79,41 +100,51 @@
             </button>
         </div>
     </div>
+        <div class="rpg-sprite rpg-sprite--orc" style="transform:scaleX(-1);"></div>
+    </div>
 
     <!-- Feature grid -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:64px;">
+    <div class="px-enter" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:64px;animation-delay:0.05s;">
 
-        <div class="px-panel" style="padding:22px;">
+        {{if .User}}
+        <a href="/profile" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
+        {{else}}
+        <a href="/auth/github" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
+        {{end}}
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <i data-lucide="user" style="width:18px;height:18px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
                 <p style="color:var(--gold);font-size:7px;letter-spacing:2px;">CHARACTER</p>
             </div>
             <p style="color:#fff;font-size:10px;margin-bottom:12px;">LEVEL UP YOUR PROFILE</p>
             <p style="color:var(--muted);font-size:8px;line-height:2.2;">Earn XP from commits, PRs, reviews. Unlock titles and classes as you grow.</p>
-        </div>
+        </a>
 
-        <div class="px-panel" style="padding:22px;">
+        {{if .User}}
+        <a href="/profile" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
+        {{else}}
+        <a href="/auth/github" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
+        {{end}}
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <i data-lucide="bar-chart-2" style="width:18px;height:18px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
                 <p style="color:var(--gold);font-size:7px;letter-spacing:2px;">STATS</p>
             </div>
             <p style="color:#fff;font-size:10px;margin-bottom:12px;">POWER&#183;INTELLECT&#183;WISDOM</p>
             <p style="color:var(--muted);font-size:8px;line-height:2.2;">5 stats from your GitHub activity. Class assigned by your primary language.</p>
-        </div>
+        </a>
 
-        <div class="px-panel-cyan" style="padding:22px;">
+        <a href="/cards" class="px-panel-cyan px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <i data-lucide="id-card" style="width:18px;height:18px;stroke:var(--cyan);stroke-width:2;flex-shrink:0;"></i>
                 <p style="color:var(--cyan);font-size:7px;letter-spacing:2px;">README CARD</p>
             </div>
             <p style="color:#fff;font-size:10px;margin-bottom:12px;">SHOW OFF YOUR PROGRESS</p>
             <p style="color:var(--muted);font-size:8px;line-height:2.2;">Auto-updating SVG card. Drop one line into your GitHub README.</p>
-        </div>
+        </a>
 
     </div>
 
     <!-- Class roster -->
-    <div class="px-panel" style="padding:28px;margin-bottom:64px;">
+    <div class="px-panel px-enter" style="padding:28px;margin-bottom:64px;animation-delay:0.15s;">
         <p style="color:var(--gold);font-size:8px;letter-spacing:2px;margin-bottom:8px;">[ CLASS ROSTER ]</p>
         <p style="color:var(--muted);font-size:7px;margin-bottom:24px;line-height:2;">YOUR CLASS IS DETERMINED BY YOUR PRIMARY LANGUAGE.</p>
 
@@ -155,14 +186,181 @@
         </div>
     </div>
 
+    <!-- Card gallery -->
+    <div class="px-enter" style="margin-bottom:64px;animation-delay:0.2s;">
+        <p style="color:var(--gold);font-size:8px;letter-spacing:2px;margin-bottom:8px;">[ CLASS CARDS ]</p>
+        <p style="color:var(--muted);font-size:7px;margin-bottom:20px;line-height:2;">EVERY CLASS. ONE README CARD.</p>
+        <div style="overflow-x:auto;padding-bottom:8px;">
+            <div style="display:flex;gap:12px;width:max-content;">
+                <img src="/card/demo?class=Guardian"   alt="Guardian card"   style="height:195px;border:4px solid #00add8;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Berserker"  alt="Berserker card"  style="height:195px;border:4px solid #e05d44;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Paladin"    alt="Paladin card"    style="height:195px;border:4px solid #3178c6;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Rogue"      alt="Rogue card"      style="height:195px;border:4px solid #e8c94a;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Sage"       alt="Sage card"       style="height:195px;border:4px solid #4b8bbe;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Knight"     alt="Knight card"     style="height:195px;border:4px solid #9b72cf;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Battlemage" alt="Battlemage card" style="height:195px;border:4px solid #c07d28;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Warlord"    alt="Warlord card"    style="height:195px;border:4px solid #f34b7d;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+                <img src="/card/demo?class=Wanderer"   alt="Wanderer card"   style="height:195px;border:4px solid #6e7681;box-shadow:4px 4px 0 #000;flex-shrink:0;image-rendering:pixelated;">
+            </div>
+        </div>
+    </div>
+
     <!-- Ticker -->
     <div style="overflow:hidden;border-top:4px solid var(--border);border-bottom:4px solid var(--border);padding:10px 0;background:var(--panel);">
-        <p style="color:var(--muted);font-size:7px;white-space:nowrap;animation:marquee 22s linear infinite;display:inline-block;padding-left:100%;">
-            &#9670; COMMIT XP +10 &nbsp;&nbsp;&nbsp; &#9670; PULL REQUEST MERGED XP +100 &nbsp;&nbsp;&nbsp; &#9670; ACHIEVEMENT UNLOCKED: FIRST COMMIT &nbsp;&nbsp;&nbsp; &#9670; LEVEL UP! &nbsp;&nbsp;&nbsp; &#9670; NEW CLASS: GUARDIAN &nbsp;&nbsp;&nbsp; &#9670; STREAK +1 DAY &nbsp;&nbsp;&nbsp; &#9670; REPOSITORY CREATED &nbsp;&nbsp;&nbsp; &#9670; CODE REVIEW SUBMITTED &nbsp;&nbsp;&nbsp; &#9670; STAR RECEIVED XP +5
-        </p>
+        <div style="display:inline-flex;white-space:nowrap;animation:marquee-loop 40s linear infinite;">
+            <span style="color:var(--muted);font-size:7px;padding-right:80px;">&#9670; COMMIT XP +10 &nbsp;&nbsp;&nbsp; &#9670; PULL REQUEST MERGED XP +100 &nbsp;&nbsp;&nbsp; &#9670; ACHIEVEMENT UNLOCKED: FIRST COMMIT &nbsp;&nbsp;&nbsp; &#9670; LEVEL UP! &nbsp;&nbsp;&nbsp; &#9670; NEW CLASS: GUARDIAN &nbsp;&nbsp;&nbsp; &#9670; STREAK +1 DAY &nbsp;&nbsp;&nbsp; &#9670; REPOSITORY CREATED &nbsp;&nbsp;&nbsp; &#9670; CODE REVIEW SUBMITTED &nbsp;&nbsp;&nbsp; &#9670; STAR RECEIVED XP +5</span>
+            <span style="color:var(--muted);font-size:7px;padding-right:80px;">&#9670; COMMIT XP +10 &nbsp;&nbsp;&nbsp; &#9670; PULL REQUEST MERGED XP +100 &nbsp;&nbsp;&nbsp; &#9670; ACHIEVEMENT UNLOCKED: FIRST COMMIT &nbsp;&nbsp;&nbsp; &#9670; LEVEL UP! &nbsp;&nbsp;&nbsp; &#9670; NEW CLASS: GUARDIAN &nbsp;&nbsp;&nbsp; &#9670; STREAK +1 DAY &nbsp;&nbsp;&nbsp; &#9670; REPOSITORY CREATED &nbsp;&nbsp;&nbsp; &#9670; CODE REVIEW SUBMITTED &nbsp;&nbsp;&nbsp; &#9670; STAR RECEIVED XP +5</span>
+        </div>
     </div>
 
 </div>
+
+
+<style>
+/* Flanking idle sprites */
+.rpg-sprite {
+    width: 150px; height: 150px;
+    image-rendering: pixelated;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+}
+.rpg-sprite--soldier {
+    background-image: url('/static/assets/sprites/Soldier-Idle.png');
+    background-size: 900px 150px;
+    animation: rpg-idle-6 0.72s steps(6) infinite;
+}
+.rpg-sprite--orc {
+    background-image: url('/static/assets/sprites/Orc-Idle.png');
+    background-size: 900px 150px;
+    animation: rpg-idle-6 0.96s steps(6) infinite;
+}
+@keyframes rpg-idle-6 {
+    from { background-position: 0 0; }
+    to   { background-position: -900px 0; }
+}
+
+@media (max-width: 640px) { .rpg-sprite { display: none; } }
+</style>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const portrait = document.getElementById('char-portrait');
+if (!portrait) throw new Error('no portrait');
+
+const canvas  = document.getElementById('rpg-canvas');
+const loading = document.getElementById('canvas-loading');
+const label   = document.getElementById('canvas-class-label');
+const hint    = label ? label.nextElementSibling : null;
+const charClass = (portrait.dataset.class || '').toLowerCase();
+
+const classToModel = {
+    guardian: 'Knight', berserker: 'Barbarian', paladin: 'Knight',
+    rogue: 'Rogue_Hooded', sage: 'Mage', knight: 'Knight',
+    battlemage: 'Mage', warlord: 'Barbarian', wanderer: 'Ranger'
+};
+
+const ALL_MODELS  = ['Mage', 'Knight', 'Barbarian', 'Ranger', 'Rogue_Hooded'];
+const MODEL_LABEL = { Mage:'SAGE', Knight:'GUARDIAN', Barbarian:'BERSERKER', Ranger:'WANDERER', Rogue_Hooded:'ROGUE' };
+const startModel  = classToModel[charClass] || 'Mage';
+let currentIdx    = ALL_MODELS.indexOf(startModel);
+if (currentIdx < 0) currentIdx = 0;
+
+if (label) label.textContent = MODEL_LABEL[startModel] || 'MAGE';
+if (hint)  hint.textContent  = 'CLICK TO SWITCH ▶';
+
+const W = 260, H = 340;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050010);
+
+const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+camera.position.set(0, 1.5, 3.8);
+
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 1.0, 0);
+controls.enablePan = false;
+controls.enableZoom = false;
+controls.minPolarAngle = Math.PI * 0.25;
+controls.maxPolarAngle = Math.PI * 0.75;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 2.0;
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.update();
+
+scene.add(new THREE.AmbientLight(0x5522aa, 1.2));
+const key = new THREE.DirectionalLight(0xFFD700, 2.2);
+key.position.set(2, 5, 3);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x00E5FF, 0.7);
+fill.position.set(-2, 1, -2);
+scene.add(fill);
+
+let model = null;
+const loader = new GLTFLoader();
+
+function normalizeModel(m) {
+    const box = new THREE.Box3().setFromObject(m);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const s = 2.0 / size.y;
+    m.scale.setScalar(s);
+    box.setFromObject(m);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    m.position.set(-center.x, -box.min.y, -center.z);
+}
+
+function loadModel(name) {
+    if (model) { scene.remove(model); model = null; }
+    if (loading) loading.style.display = 'flex';
+    loader.load('/static/assets/3d/characters/' + name + '.glb', function(gltf) {
+        model = gltf.scene;
+        normalizeModel(model);
+        scene.add(model);
+        if (loading) loading.style.display = 'none';
+        if (label) label.textContent = MODEL_LABEL[name] || name;
+    }, undefined, function() {
+        if (loading) loading.style.display = 'none';
+    });
+}
+
+loadModel(ALL_MODELS[currentIdx]);
+
+canvas.style.cursor = 'grab';
+
+let dragMoved = false;
+canvas.addEventListener('mousedown', function() { dragMoved = false; });
+canvas.addEventListener('mousemove', function() { dragMoved = true; });
+canvas.addEventListener('mouseup', function() {
+    if (!dragMoved) {
+        currentIdx = (currentIdx + 1) % ALL_MODELS.length;
+        loadModel(ALL_MODELS[currentIdx]);
+    }
+});
+canvas.addEventListener('mousedown', function() { canvas.style.cursor = 'grabbing'; });
+canvas.addEventListener('mouseup',   function() { canvas.style.cursor = 'grab'; });
+
+let animFrameId;
+(function animate() {
+    animFrameId = requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}());
+
+document.addEventListener('htmx:beforeSwap', function() {
+    cancelAnimationFrame(animFrameId);
+    controls.dispose();
+    renderer.dispose();
+}, { once: true });
+</script>
 
 <script>
 var classDescs = {
