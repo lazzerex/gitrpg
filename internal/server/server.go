@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/lazzerex/gitrpg/internal/achievements"
 	"github.com/lazzerex/gitrpg/internal/auth"
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
@@ -25,32 +26,34 @@ import (
 )
 
 type Server struct {
-	cfg        *config.Config
-	router     *chi.Mux
-	db         *pgxpool.Pool
-	redis      *redis.Client
-	logger     *slog.Logger
-	templates  map[string]*template.Template
-	auth       *auth.Handler
-	worker     *worker.Worker
-	users      *users.Store
-	characters *characters.Service
+	cfg          *config.Config
+	router       *chi.Mux
+	db           *pgxpool.Pool
+	redis        *redis.Client
+	logger       *slog.Logger
+	templates    map[string]*template.Template
+	auth         *auth.Handler
+	worker       *worker.Worker
+	users        *users.Store
+	characters   *characters.Service
+	achievements *achievements.Service
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, userStore *users.Store) *Server {
+func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, userStore *users.Store) *Server {
 	authHandler := auth.NewHandler(cfg, userStore, logger)
 	authHandler.SetPostLogin(w.SyncUser)
 
 	s := &Server{
-		cfg:        cfg,
-		router:     chi.NewRouter(),
-		db:         db,
-		redis:      rdb,
-		logger:     logger,
-		auth:       authHandler,
-		worker:     w,
-		users:      userStore,
-		characters: charSvc,
+		cfg:          cfg,
+		router:       chi.NewRouter(),
+		db:           db,
+		redis:        rdb,
+		logger:       logger,
+		auth:         authHandler,
+		worker:       w,
+		users:        userStore,
+		characters:   charSvc,
+		achievements: achSvc,
 	}
 	s.registerMiddleware()
 	s.registerRoutes()
@@ -100,16 +103,41 @@ var templateFuncs = template.FuncMap{
 // in dir. Each page gets its own isolated set so {{define "content"}} blocks don't collide.
 func (s *Server) LoadTemplates(dir string) error {
 	pages := []string{"index.html", "profile.html", "public.html", "cards.html"}
-	s.templates = make(map[string]*template.Template, len(pages))
 	base := filepath.Join(dir, "base.html")
+	partial := filepath.Join(dir, "partials", "char-panel.html")
+	s.templates = make(map[string]*template.Template, len(pages)+1)
+
 	for _, page := range pages {
-		tmpl, err := template.New("").Funcs(templateFuncs).ParseFiles(base, filepath.Join(dir, page))
+		files := []string{base, filepath.Join(dir, page)}
+		if page == "profile.html" {
+			files = append(files, partial)
+		}
+		tmpl, err := template.New("").Funcs(templateFuncs).ParseFiles(files...)
 		if err != nil {
 			return err
 		}
 		s.templates[page] = tmpl
 	}
+
+	// Standalone partial for HTMX responses
+	tmpl, err := template.New("").Funcs(templateFuncs).ParseFiles(partial)
+	if err != nil {
+		return err
+	}
+	s.templates["char-panel"] = tmpl
 	return nil
+}
+
+func (s *Server) renderPartial(w http.ResponseWriter, name string, data any) {
+	tmpl, ok := s.templates[name]
+	if !ok {
+		http.Error(w, "partial not found: "+name, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
+		s.logger.Error("partial render failed", "name", name, "error", err)
+	}
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
@@ -174,18 +202,29 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		accentColor = svgpkg.ClassColor(char.Class)
 	}
 
+	achs, err := s.achievements.GetForUser(r.Context(), user.ID)
+	if err != nil {
+		s.logger.Error("achievements load failed", "user_id", user.ID, "error", err)
+	}
+
 	s.render(w, "profile.html", profileData{
-		User:        user,
-		Character:   char,
-		IsStale:     isStale,
-		AccentColor: accentColor,
-		BaseURL:     requestBaseURL(r),
+		User:         user,
+		Character:    char,
+		IsStale:      isStale,
+		AccentColor:  accentColor,
+		BaseURL:      requestBaseURL(r),
+		Achievements: achs,
 	})
 }
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 	user, _ := r.Context().Value(users.ContextKey).(*users.User)
 	s.worker.SyncUser(user)
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/profile")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
@@ -213,19 +252,21 @@ type baseData struct {
 }
 
 type profileData struct {
-	User        *users.User
-	Character   *stats.Character
-	IsStale     bool
-	AccentColor string
-	BaseURL     string
+	User         *users.User
+	Character    *stats.Character
+	IsStale      bool
+	AccentColor  string
+	BaseURL      string
+	Achievements []achievements.UserAchievement
 }
 
 type publicProfileData struct {
-	User        *users.User
-	ProfileUser *users.User
-	Character   *stats.Character
-	AccentColor string
-	BaseURL     string
+	User         *users.User
+	ProfileUser  *users.User
+	Character    *stats.Character
+	AccentColor  string
+	BaseURL      string
+	Achievements []achievements.UserAchievement
 }
 
 func (s *Server) baseData(r *http.Request) baseData {
@@ -258,12 +299,18 @@ func (s *Server) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 		accentColor = svgpkg.ClassColor(char.Class)
 	}
 
+	achs, err := s.achievements.GetForUser(r.Context(), profileUser.ID)
+	if err != nil {
+		s.logger.Error("achievements load failed", "user_id", profileUser.ID, "error", err)
+	}
+
 	s.render(w, "public.html", publicProfileData{
-		User:        viewer,
-		ProfileUser: profileUser,
-		Character:   char,
-		AccentColor: accentColor,
-		BaseURL:     requestBaseURL(r),
+		User:         viewer,
+		ProfileUser:  profileUser,
+		Character:    char,
+		AccentColor:  accentColor,
+		BaseURL:      requestBaseURL(r),
+		Achievements: achs,
 	})
 }
 
@@ -301,11 +348,21 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request, compact bool)
 		username = username[:len(username)-4]
 	}
 
+	style := r.URL.Query().Get("style")
+	switch style {
+	case "chart", "stats":
+	default:
+		style = ""
+	}
+
 	prefix := "svg:card:"
 	if compact {
 		prefix = "svg:compact:"
 	}
 	cacheKey := prefix + username
+	if style != "" {
+		cacheKey = prefix + username + ":" + style
+	}
 
 	cached, err := s.redis.Get(r.Context(), cacheKey).Result()
 	if err == nil {
@@ -332,7 +389,7 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request, compact bool)
 	if compact {
 		svgStr, err = svgpkg.Compact(user.Login, char)
 	} else {
-		svgStr, err = svgpkg.Card(user.Login, char)
+		svgStr, err = svgpkg.Card(user.Login, char, style)
 	}
 	if err != nil {
 		s.logger.Error("svg generation failed", "user", username, "error", err)
