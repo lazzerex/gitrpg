@@ -3,59 +3,75 @@
 {{define "title"}}Card Generator — GitHub RPG{{end}}
 
 {{define "content"}}
-<div class="max-w-2xl mx-auto px-4 py-12">
+<div style="max-width:700px;margin:0 auto;padding:40px 16px 64px;">
 
-    <div class="text-center mb-10">
-        <h1 class="text-3xl font-bold text-white mb-2">Card Generator</h1>
-        <p class="text-gray-400">Preview any GitHub RPG card and copy the README snippet.</p>
+    <div style="text-align:center;margin-bottom:40px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border:4px solid var(--gold);background:var(--panel);box-shadow:4px 4px 0 #000;margin-bottom:20px;">
+            <i data-lucide="id-card" style="width:28px;height:28px;stroke:var(--gold);stroke-width:1.5;"></i>
+        </div>
+        <h1 style="color:var(--gold);font-size:18px;text-shadow:3px 3px 0 #000;margin-bottom:14px;">CARD GENERATOR</h1>
+        <p style="color:var(--muted);font-size:8px;line-height:2;">PREVIEW ANY GITHUB RPG CARD &#183; COPY YOUR README SNIPPET</p>
     </div>
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-        <div class="flex gap-3">
-            <input
-                id="username-input"
-                type="text"
-                placeholder="GitHub username"
-                class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-500"
-                autocomplete="off"
-                spellcheck="false"
-            >
-            <button
-                onclick="previewCard()"
-                class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-                Preview
+    <div class="px-panel" style="padding:24px;margin-bottom:24px;">
+        <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:16px;">[ ENTER USERNAME ]</p>
+        <div style="display:flex;gap:12px;">
+            <input id="username-input" type="text" placeholder="GITHUB USERNAME"
+                   class="px-input" autocomplete="off" spellcheck="false" style="flex:1;">
+            <button onclick="previewCard()" class="px-btn px-btn-gold"
+                    style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:6px;">
+                <i data-lucide="search" style="width:12px;height:12px;stroke:#050010;stroke-width:2;"></i>GO
             </button>
         </div>
     </div>
 
-    <div id="preview-section" class="hidden">
+    <div class="px-panel" style="padding:20px 24px;margin-bottom:24px;">
+        <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:14px;">[ CARD STYLE ]</p>
+        <div style="display:flex;gap:10px;">
+            <button id="btn-classic" onclick="setStyle('')"       class="px-btn px-btn-gold" style="font-size:8px;padding:8px 14px;">CLASSIC</button>
+            <button id="btn-chart"   onclick="setStyle('chart')"  class="px-btn"           style="font-size:8px;padding:8px 14px;">CHART</button>
+            <button id="btn-stats"   onclick="setStyle('stats')"  class="px-btn"           style="font-size:8px;padding:8px 14px;">STATS</button>
+        </div>
+    </div>
 
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-            <p class="text-xs text-gray-500 uppercase tracking-widest mb-4">Full Card</p>
-            <img id="card-full" src="" alt="character card" class="w-full rounded mb-4">
-            <div class="bg-gray-800 rounded p-3 flex items-center justify-between gap-3">
-                <code id="snippet-full" class="text-xs text-gray-300 break-all flex-1"></code>
-                <button onclick="copySnippet('snippet-full', this)" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0">
-                    Copy
+    <div id="preview-section" style="display:none;">
+
+        <div class="px-panel" style="padding:24px;margin-bottom:16px;">
+            <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ FULL CARD ]</p>
+            <img id="card-full" src="" alt="character card"
+                 style="width:100%;display:block;margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+                <div class="px-code" style="flex:1;">
+                    <code id="snippet-full" style="font-family:'Press Start 2P',monospace;font-size:8px;word-break:break-all;"></code>
+                </div>
+                <button id="copy-full-btn" onclick="copySnippet('snippet-full', 'copy-full-btn')"
+                        class="px-btn px-btn-cyan"
+                        style="font-size:7px;padding:8px 12px;flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
+                    <i id="copy-full-icon" data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY
                 </button>
             </div>
         </div>
 
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-            <p class="text-xs text-gray-500 uppercase tracking-widest mb-4">Compact Card</p>
-            <img id="card-compact" src="" alt="compact card" class="rounded mb-4">
-            <div class="bg-gray-800 rounded p-3 flex items-center justify-between gap-3">
-                <code id="snippet-compact" class="text-xs text-gray-300 break-all flex-1"></code>
-                <button onclick="copySnippet('snippet-compact', this)" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0">
-                    Copy
+        <div class="px-panel" style="padding:24px;margin-bottom:16px;">
+            <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ COMPACT CARD ]</p>
+            <img id="card-compact" src="" alt="compact card"
+                 style="display:block;max-width:100%;margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+                <div class="px-code" style="flex:1;">
+                    <code id="snippet-compact" style="font-family:'Press Start 2P',monospace;font-size:8px;word-break:break-all;"></code>
+                </div>
+                <button id="copy-compact-btn" onclick="copySnippet('snippet-compact', 'copy-compact-btn')"
+                        class="px-btn px-btn-cyan"
+                        style="font-size:7px;padding:8px 12px;flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
+                    <i id="copy-compact-icon" data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY
                 </button>
             </div>
         </div>
 
-        <div class="text-center">
-            <a id="profile-link" href="#" class="text-sm text-gray-400 hover:text-white transition-colors">
-                View full profile →
+        <div style="text-align:center;padding:8px;">
+            <a id="profile-link" href="#" class="px-btn px-btn-cyan"
+               style="font-size:8px;display:inline-flex;align-items:center;gap:8px;">
+                <i data-lucide="arrow-right" style="width:13px;height:13px;stroke:var(--cyan);stroke-width:2;"></i>VIEW FULL PROFILE
             </a>
         </div>
 
@@ -64,36 +80,54 @@
 </div>
 
 <script>
+var currentStyle = '';
+
+function setStyle(style) {
+    currentStyle = style;
+    var btns = { '': 'btn-classic', 'chart': 'btn-chart', 'stats': 'btn-stats' };
+    Object.keys(btns).forEach(function(s) {
+        var el = document.getElementById(btns[s]);
+        el.className = s === style ? 'px-btn px-btn-gold' : 'px-btn';
+        el.style.fontSize = '8px';
+        el.style.padding  = '8px 14px';
+    });
+    var username = document.getElementById('username-input').value.trim();
+    if (username) previewCard();
+}
+
 function previewCard() {
     var username = document.getElementById('username-input').value.trim();
     if (!username) return;
-
     var origin = window.location.origin;
-    var section = document.getElementById('preview-section');
-
-    document.getElementById('card-full').src = '/card/' + username + '.svg?t=' + Date.now();
-    document.getElementById('card-compact').src = '/card/compact/' + username + '.svg?t=' + Date.now();
-
-    document.getElementById('snippet-full').textContent =
-        '![GitHub RPG](' + origin + '/card/' + username + '.svg)';
-    document.getElementById('snippet-compact').textContent =
-        '![GitHub RPG](' + origin + '/card/compact/' + username + '.svg)';
-
+    var styleParam = currentStyle ? '?style=' + currentStyle : '';
+    var sep = currentStyle ? '&' : '?';
+    var ts = sep + 't=' + Date.now();
+    document.getElementById('card-full').src    = '/card/' + username + '.svg' + styleParam + ts;
+    document.getElementById('card-compact').src = '/card/compact/' + username + '.svg?' + 't=' + Date.now();
+    document.getElementById('snippet-full').textContent    = '![GitHub RPG](' + origin + '/card/' + username + '.svg' + styleParam + ')';
+    document.getElementById('snippet-compact').textContent = '![GitHub RPG](' + origin + '/card/compact/' + username + '.svg)';
     document.getElementById('profile-link').href = '/u/' + username;
-
-    section.classList.remove('hidden');
+    document.getElementById('preview-section').style.display = 'block';
 }
 
-function copySnippet(id, btn) {
-    var text = document.getElementById(id).textContent;
-    navigator.clipboard.writeText(text).then(function () {
-        var orig = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(function () { btn.textContent = orig; }, 1500);
+function copySnippet(snippetId, btnId) {
+    var text = document.getElementById(snippetId).textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = document.getElementById(btnId);
+        var orig = btn.textContent.trim();
+        btn.textContent = 'COPIED!';
+        btn.style.borderColor = 'var(--green)';
+        btn.style.color = 'var(--green)';
+        setTimeout(function() {
+            btn.innerHTML = '<i data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY';
+            btn.style.borderColor = '';
+            btn.style.color = '';
+            lucide.createIcons();
+        }, 1500);
     });
 }
 
-document.getElementById('username-input').addEventListener('keydown', function (e) {
+document.getElementById('username-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') previewCard();
 });
 </script>
