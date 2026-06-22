@@ -4,7 +4,9 @@
 
 **Transform your GitHub activity into an RPG character.**
 
-Commits earn XP. Repositories unlock classes. Every push levels you up.
+Commits earn XP. Repositories unlock classes. Every push levels you up. 
+
+(Still In Very Early Development Phase. Expect Breaking Changes In The Future)
 
 <br>
 
