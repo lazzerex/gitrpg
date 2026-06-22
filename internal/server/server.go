@@ -235,7 +235,7 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 	s.syncStart.Store(user.ID, time.Now())
 	s.worker.SyncUser(user)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, syncingHTML)
+	_, _ = fmt.Fprint(w, syncingHTML)
 }
 
 const syncingHTML = `<div id="sync-status" hx-get="/sync/status" hx-trigger="every 2s" hx-swap="outerHTML"><p class="blink" style="color:var(--gold);font-size:8px;letter-spacing:1px;">SYNCING...</p></div>`
@@ -253,14 +253,14 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	if time.Since(startTime) > 3*time.Minute {
 		s.syncStart.Delete(user.ID)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, syncBtnHTML)
+		_, _ = fmt.Fprint(w, syncBtnHTML)
 		return
 	}
 
 	char, err := s.characters.GetByUserID(r.Context(), user.ID)
 	if err != nil || char == nil || !char.UpdatedAt.After(startTime) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, syncingHTML)
+		_, _ = fmt.Fprint(w, syncingHTML)
 		return
 	}
 
@@ -272,10 +272,10 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("HX-Retarget", "#char-panel")
 	w.Header().Set("HX-Reswap", "outerHTML")
 	s.renderPartial(w, "char-panel", profileData{
-		User:        user,
-		Character:   char,
-		IsStale:     time.Since(char.UpdatedAt) > 12*time.Hour,
-		AccentColor: accentColor,
+		User:         user,
+		Character:    char,
+		IsStale:      time.Since(char.UpdatedAt) > 12*time.Hour,
+		AccentColor:  accentColor,
 		Achievements: achs,
 	})
 }
