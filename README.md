@@ -22,7 +22,10 @@ Commits earn XP. Repositories unlock classes. Every push levels you up.
 <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white"/>
 <img src="https://img.shields.io/badge/Goose-Migrations-4169E1?style=flat"/>
 <img src="https://img.shields.io/badge/GitHub_OAuth-181717?style=flat&logo=github&logoColor=white"/>
-<img src="https://img.shields.io/badge/Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white"/>
+<img src="https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white"/>
+<img src="https://img.shields.io/badge/Neon-00E599?style=flat"/>
+<img src="https://img.shields.io/badge/Upstash-00E9A3?style=flat"/>
+
 
 
 </div>
@@ -52,11 +55,12 @@ You get a README card you can embed anywhere.
 |---|---|
 | Backend | Go 1.25, Chi router |
 | Frontend | HTMX, TailwindCSS, Go Templates |
-| Database | PostgreSQL 16 |
-| Cache / SVG cache | Redis 7 |
+| Database | PostgreSQL 16 (Neon) |
+| Cache / SVG cache | Redis 7 (Upstash) |
 | Auth | GitHub OAuth |
 | Migrations | Goose |
 | 3D viewer | Three.js |
+| Hosting | Render |
 
 
 ## Classes
