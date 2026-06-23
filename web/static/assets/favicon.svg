@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <rect width="32" height="32" fill="#050010"/>
+  <!-- corner brackets -->
+  <rect x="0" y="0" width="6" height="2" fill="#FFD700"/>
+  <rect x="0" y="0" width="2" height="6" fill="#FFD700"/>
+  <rect x="26" y="0" width="6" height="2" fill="#FFD700"/>
+  <rect x="30" y="0" width="2" height="6" fill="#FFD700"/>
+  <rect x="0" y="30" width="6" height="2" fill="#FFD700"/>
+  <rect x="0" y="26" width="2" height="6" fill="#FFD700"/>
+  <rect x="26" y="30" width="6" height="2" fill="#FFD700"/>
+  <rect x="30" y="26" width="2" height="6" fill="#FFD700"/>
+  <!-- sword tip -->
+  <rect x="14" y="3" width="4" height="2" fill="#E0D8F4"/>
+  <!-- blade -->
+  <rect x="14" y="5" width="4" height="10" fill="#C0B8DC"/>
+  <!-- blade highlight -->
+  <rect x="14" y="5" width="2" height="10" fill="#D8D0EC"/>
+  <!-- guard (gold) -->
+  <rect x="8" y="15" width="16" height="3" fill="#FFD700"/>
+  <rect x="10" y="14" width="12" height="1" fill="#B8860B"/>
+  <!-- handle -->
+  <rect x="14" y="18" width="4" height="7" fill="#7A4020"/>
+  <rect x="14" y="18" width="2" height="7" fill="#9A5828"/>
+  <!-- pommel -->
+  <rect x="12" y="25" width="8" height="4" fill="#FFD700"/>
+  <rect x="13" y="25" width="6" height="2" fill="#FFF0A0"/>
+  <!-- git + (top right corner) -->
+  <rect x="25" y="2" width="2" height="8" fill="#00FF41"/>
+  <rect x="22" y="5" width="8" height="2" fill="#00FF41"/>
+</svg>
