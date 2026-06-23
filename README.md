@@ -2,6 +2,10 @@
 
 # GitRPG
 
+<img width="677" height="369" alt="gitrpg-logo-removebg-preview" src="https://github.com/user-attachments/assets/f4b94946-0aa1-4c82-91f3-7003486f320b" />
+
+
+
 **Transform your GitHub activity into an RPG character.**
 
 Commits earn XP. Repositories unlock classes. Every push levels you up. 
