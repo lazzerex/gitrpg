@@ -252,6 +252,7 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.syncStart.Delete(user.ID)
+	_ = s.redis.Del(r.Context(), "svg:card:"+user.Login).Err()
 
 	w.Header().Set("HX-Redirect", "/profile")
 	w.WriteHeader(http.StatusNoContent)
