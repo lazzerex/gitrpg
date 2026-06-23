@@ -130,18 +130,6 @@ func (s *Server) LoadTemplates(dir string) error {
 	return nil
 }
 
-func (s *Server) renderPartial(w http.ResponseWriter, name string, data any) {
-	tmpl, ok := s.templates[name]
-	if !ok {
-		http.Error(w, "partial not found: "+name, http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
-		s.logger.Error("partial render failed", "name", name, "error", err)
-	}
-}
-
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	tmpl, ok := s.templates[name]
 	if !ok {
