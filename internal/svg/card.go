@@ -69,29 +69,29 @@ var classIconMap = map[string]string{
 }
 
 type cardData struct {
-	Login       string
-	Level       int
-	NextLevel   int
-	Class       string
-	Title       string
-	TotalXP     int
-	XPInto      int
-	XPFor       int
-	XPBarWidth  int
-	XPPct       int
-	XPArcDash   int
-	AccentColor string
-	ClassIcon   string
-	STR         int
-	INT         int
-	WIS         int
-	DEX         int
-	CHA         int
-	STRBar      int
-	INTBar      int
-	WISBar      int
-	DEXBar      int
-	CHABar      int
+	Login             string
+	Level             int
+	NextLevel         int
+	Class             string
+	Title             string
+	TotalXP           int
+	XPInto            int
+	XPFor             int
+	XPBarWidth        int
+	XPPct             int
+	XPArcDash         int
+	AccentColor       string
+	ClassIcon         string
+	STR               int
+	INT               int
+	WIS               int
+	DEX               int
+	CHA               int
+	STRBar            int
+	INTBar            int
+	WISBar            int
+	DEXBar            int
+	CHABar            int
 	StatIconPower     string
 	StatIconIntellect string
 	StatIconWisdom    string
