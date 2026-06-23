@@ -172,7 +172,6 @@ func (s *Server) registerRoutes() {
 
 	s.router.Get("/card/demo", s.handleCardDemo)
 	s.router.Get("/card/{username}", s.handleCard)
-	s.router.Get("/card/compact/{username}", s.handleCardCompact)
 
 	s.router.Get("/u/{username}", s.handlePublicProfile)
 	s.router.Get("/cards", s.handleCards)
@@ -266,18 +265,8 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 
 	s.syncStart.Delete(user.ID)
 
-	accentColor := svgpkg.ClassColor(char.Class)
-	achs, _ := s.achievements.GetForUser(r.Context(), user.ID)
-
-	w.Header().Set("HX-Retarget", "#char-panel")
-	w.Header().Set("HX-Reswap", "outerHTML")
-	s.renderPartial(w, "char-panel", profileData{
-		User:         user,
-		Character:    char,
-		IsStale:      time.Since(char.UpdatedAt) > 12*time.Hour,
-		AccentColor:  accentColor,
-		Achievements: achs,
-	})
+	w.Header().Set("HX-Redirect", "/profile")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 const syncBtnHTML = `<div id="sync-status"><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW</button></div>`
@@ -404,35 +393,16 @@ func (s *Server) handleCardDemo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCard(w http.ResponseWriter, r *http.Request) {
-	s.serveCard(w, r, false)
+	s.serveCard(w, r)
 }
 
-func (s *Server) handleCardCompact(w http.ResponseWriter, r *http.Request) {
-	s.serveCard(w, r, true)
-}
-
-func (s *Server) serveCard(w http.ResponseWriter, r *http.Request, compact bool) {
+func (s *Server) serveCard(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
-	// strip .svg suffix — URLs are /card/username.svg
 	if len(username) > 4 && username[len(username)-4:] == ".svg" {
 		username = username[:len(username)-4]
 	}
 
-	style := r.URL.Query().Get("style")
-	switch style {
-	case "chart", "stats":
-	default:
-		style = ""
-	}
-
-	prefix := "svg:card:"
-	if compact {
-		prefix = "svg:compact:"
-	}
-	cacheKey := prefix + username
-	if style != "" {
-		cacheKey = prefix + username + ":" + style
-	}
+	cacheKey := "svg:card:" + username
 
 	cached, err := s.redis.Get(r.Context(), cacheKey).Result()
 	if err == nil {
@@ -455,12 +425,7 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request, compact bool)
 		return
 	}
 
-	var svgStr string
-	if compact {
-		svgStr, err = svgpkg.Compact(user.Login, char)
-	} else {
-		svgStr, err = svgpkg.Card(user.Login, char, style)
-	}
+	svgStr, err := svgpkg.Card(user.Login, char, "")
 	if err != nil {
 		s.logger.Error("svg generation failed", "user", username, "error", err)
 		http.Error(w, "svg generation failed", http.StatusInternalServerError)
