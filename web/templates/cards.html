@@ -25,19 +25,10 @@
         </div>
     </div>
 
-    <div class="px-panel" style="padding:20px 24px;margin-bottom:24px;">
-        <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:14px;">[ CARD STYLE ]</p>
-        <div style="display:flex;gap:10px;">
-            <button id="btn-classic" onclick="setStyle('')"       class="px-btn px-btn-gold" style="font-size:8px;padding:8px 14px;">CLASSIC</button>
-            <button id="btn-chart"   onclick="setStyle('chart')"  class="px-btn"           style="font-size:8px;padding:8px 14px;">CHART</button>
-            <button id="btn-stats"   onclick="setStyle('stats')"  class="px-btn"           style="font-size:8px;padding:8px 14px;">STATS</button>
-        </div>
-    </div>
-
     <div id="preview-section" style="display:none;">
 
         <div class="px-panel" style="padding:24px;margin-bottom:16px;">
-            <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ FULL CARD ]</p>
+            <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ README CARD ]</p>
             <img id="card-full" src="" alt="character card"
                  style="width:100%;display:block;margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;">
             <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -48,22 +39,6 @@
                         class="px-btn px-btn-cyan"
                         style="font-size:7px;padding:8px 12px;flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
                     <i id="copy-full-icon" data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY
-                </button>
-            </div>
-        </div>
-
-        <div class="px-panel" style="padding:24px;margin-bottom:16px;">
-            <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ COMPACT CARD ]</p>
-            <img id="card-compact" src="" alt="compact card"
-                 style="display:block;max-width:100%;margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;">
-            <div style="display:flex;align-items:flex-start;gap:12px;">
-                <div class="px-code" style="flex:1;">
-                    <code id="snippet-compact" style="font-family:'Press Start 2P',monospace;font-size:8px;word-break:break-all;"></code>
-                </div>
-                <button id="copy-compact-btn" onclick="copySnippet('snippet-compact', 'copy-compact-btn')"
-                        class="px-btn px-btn-cyan"
-                        style="font-size:7px;padding:8px 12px;flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
-                    <i id="copy-compact-icon" data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY
                 </button>
             </div>
         </div>
@@ -80,32 +55,12 @@
 </div>
 
 <script>
-var currentStyle = '';
-
-function setStyle(style) {
-    currentStyle = style;
-    var btns = { '': 'btn-classic', 'chart': 'btn-chart', 'stats': 'btn-stats' };
-    Object.keys(btns).forEach(function(s) {
-        var el = document.getElementById(btns[s]);
-        el.className = s === style ? 'px-btn px-btn-gold' : 'px-btn';
-        el.style.fontSize = '8px';
-        el.style.padding  = '8px 14px';
-    });
-    var username = document.getElementById('username-input').value.trim();
-    if (username) previewCard();
-}
-
 function previewCard() {
     var username = document.getElementById('username-input').value.trim();
     if (!username) return;
     var origin = window.location.origin;
-    var styleParam = currentStyle ? '?style=' + currentStyle : '';
-    var sep = currentStyle ? '&' : '?';
-    var ts = sep + 't=' + Date.now();
-    document.getElementById('card-full').src    = '/card/' + username + '.svg' + styleParam + ts;
-    document.getElementById('card-compact').src = '/card/compact/' + username + '.svg?' + 't=' + Date.now();
-    document.getElementById('snippet-full').textContent    = '![GitHub RPG](' + origin + '/card/' + username + '.svg' + styleParam + ')';
-    document.getElementById('snippet-compact').textContent = '![GitHub RPG](' + origin + '/card/compact/' + username + '.svg)';
+    document.getElementById('card-full').src = '/card/' + username + '.svg?t=' + Date.now();
+    document.getElementById('snippet-full').textContent = '![GitHub RPG](' + origin + '/card/' + username + '.svg)';
     document.getElementById('profile-link').href = '/u/' + username;
     document.getElementById('preview-section').style.display = 'block';
 }
@@ -114,7 +69,6 @@ function copySnippet(snippetId, btnId) {
     var text = document.getElementById(snippetId).textContent;
     navigator.clipboard.writeText(text).then(function() {
         var btn = document.getElementById(btnId);
-        var orig = btn.textContent.trim();
         btn.textContent = 'COPIED!';
         btn.style.borderColor = 'var(--green)';
         btn.style.color = 'var(--green)';
