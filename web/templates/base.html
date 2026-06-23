@@ -10,8 +10,7 @@
     <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -298,12 +297,22 @@
         <div id="rpg-hills"></div>
     </div>
     <nav hx-boost="true" style="background: var(--panel); border-bottom: 4px solid var(--border); position: sticky; top: 0; z-index: 100;">
-        <div style="max-width: 880px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;">
-            <a href="/" class="px-glitch" style="color: var(--gold); font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+        <div style="max-width: 880px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 24px;">
+            <a href="/" class="px-glitch" style="color: var(--gold); font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                 <i data-lucide="sword" style="width:16px;height:16px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
                 GITHUB RPG
             </a>
-            <div style="display: flex; gap: 20px; align-items: center;">
+            <div style="display: flex; gap: 20px; align-items: center; flex: 1;">
+                <a href="/cards" style="color: var(--muted); font-size: 8px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="id-card" style="width:12px;height:12px;stroke:var(--muted);stroke-width:2;"></i>CARDS
+                </a>
+                {{if .User}}
+                <a href="/u/{{.User.Login}}" style="color: var(--muted); font-size: 8px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="globe" style="width:12px;height:12px;stroke:var(--muted);stroke-width:2;"></i>PUBLIC
+                </a>
+                {{end}}
+            </div>
+            <div style="display: flex; gap: 16px; align-items: center; flex-shrink: 0;">
                 {{if .User}}
                     <a href="/profile" style="color: var(--cyan); font-size: 8px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
                         <i data-lucide="user" style="width:12px;height:12px;stroke:var(--cyan);stroke-width:2;"></i>{{.User.Login}}
