@@ -33,7 +33,7 @@
 
     <div class="px-panel" style="padding:24px;">
         <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ README CARD ]</p>
-        <img src="/card/{{.User.Login}}.svg" alt="character card"
+        <img src="/card/{{.User.Login}}.svg?v={{.Character.UpdatedAt.Unix}}" alt="character card"
              style="width:100%;margin-bottom:16px;border:4px solid var(--border);box-shadow:4px 4px 0 #000;display:block;">
         <div class="px-code">
             <span>![GitHub RPG]({{.BaseURL}}/card/{{.User.Login}}.svg)</span>

@@ -116,7 +116,6 @@
             animation: rpg-clouds-drift 80s linear infinite;
         }
 
-
         @keyframes rpg-clouds-drift {
             from { background-position-x: 0; }
             to   { background-position-x: -640px; }
@@ -213,7 +212,8 @@
         }
 
         /* Lucide icons in buttons/nav */
-        nav a svg, .px-btn svg { display: inline; width: 14px; height: 14px; vertical-align: middle; stroke-width: 2; margin-right: 4px; }
+        nav a svg { display: block; flex-shrink: 0; stroke-width: 2; }
+        .px-btn svg { display: inline; width: 14px; height: 14px; vertical-align: middle; stroke-width: 2; margin-right: 4px; }
 
         /* Scrollbar */
         ::-webkit-scrollbar       { width: 8px; }
