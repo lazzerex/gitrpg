@@ -97,8 +97,6 @@ type cardData struct {
 	StatIconWisdom    string
 	StatIconAgility   string
 	StatIconInfluence string
-	SceneSky          string
-	SceneHills        string
 }
 
 func statBar(val, max int) int {
@@ -113,14 +111,7 @@ func statBar(val, max int) int {
 }
 
 const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <radialGradient id="vig" cx="530" cy="155" r="130" gradientUnits="userSpaceOnUse">
-      <stop offset="45%" stop-color="#050010" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#050010" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <image href="{{.SceneSky}}" width="700" height="280" preserveAspectRatio="xMidYMid slice"/>
-  <rect width="700" height="280" fill="#050010" opacity="0.45"/>
+  <rect width="700" height="280" fill="#050010"/>
   <rect x="1" y="1" width="698" height="278" fill="none" stroke="#FFD700" stroke-width="2"/>
   <rect x="5" y="5" width="690" height="270" fill="none" stroke="{{.AccentColor}}" stroke-width="1"/>
   <line x1="5" y1="24" x2="5" y2="5" stroke="#FFD700" stroke-width="2.5"/>
@@ -140,8 +131,6 @@ const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http
   <line x1="10" y1="80" x2="328" y2="80" stroke="#3A1A7A" stroke-width="1"/>
   <polygon points="346,75 354,80 346,85 338,80" fill="#FFD700"/>
   <line x1="362" y1="80" x2="685" y2="80" stroke="#3A1A7A" stroke-width="1"/>
-  <image x="370" y="82" width="325" height="174" href="{{.SceneHills}}" preserveAspectRatio="xMidYMid slice"/>
-  <rect x="370" y="82" width="325" height="174" fill="url(#vig)"/>
   <line x1="362" y1="80" x2="362" y2="256" stroke="#3A1A7A" stroke-width="1"/>
   <image x="14" y="89" width="14" height="14" href="{{.StatIconPower}}" image-rendering="pixelated"/>
   <text x="32" y="101" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">POWER</text>
@@ -242,8 +231,6 @@ func buildData(login string, char *stats.Character) cardData {
 		StatIconWisdom:    statIconWisdom,
 		StatIconAgility:   statIconAgility,
 		StatIconInfluence: statIconInfluence,
-		SceneSky:          envBgSky,
-		SceneHills:        envBgHills,
 	}
 }
 
