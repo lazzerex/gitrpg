@@ -46,10 +46,6 @@ You get a README card you can embed anywhere.
 
 ![GitHub RPG](https://gitrpg.onrender.com/card/lazzerex.svg)
 
-![GitHub RPG Stats](https://gitrpg.onrender.com/card/lazzerex.svg?style=stats)
-
-![GitHub RPG Chart](https://gitrpg.onrender.com/card/lazzerex.svg?style=chart)
-
 ## Features
 
 - **XP from real activity** - commits, merged PRs, reviews, issues, repository creation
