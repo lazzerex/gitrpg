@@ -2,7 +2,8 @@
 
 # GitRPG
 
-<img width="677" height="369" alt="gitrpg-logo-removebg-preview" src="https://github.com/user-attachments/assets/f4b94946-0aa1-4c82-91f3-7003486f320b" />
+<img width="469" height="155" alt="gitrpg-logo" src="https://github.com/user-attachments/assets/9401cf11-6203-49bd-82f0-bf8e005a9cbe" />
+
 
 
 
