@@ -80,6 +80,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	go func() {
+		ticker := time.NewTicker(4 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := db.Ping(ctx); err != nil {
+				logger.Warn("db keepalive ping failed", "error", err)
+			}
+			cancel()
+		}
+	}()
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
