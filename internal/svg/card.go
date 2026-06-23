@@ -120,12 +120,13 @@ const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http
   <text x="14" y="40" font-family="Courier New,Courier,monospace" font-size="24" font-weight="bold" fill="#ffffff">{{.Login}}</text>
   <rect x="14" y="46" width="70" height="20" fill="{{.AccentColor}}"/>
   <text x="49" y="60" font-family="Courier New,Courier,monospace" font-size="11" font-weight="bold" fill="#050010" text-anchor="middle">LV.{{.Level}}</text>
+  <rect x="86" y="46" width="106" height="20" fill="#180830" stroke="{{.AccentColor}}" stroke-width="1"/>
   <text x="90" y="60" font-family="Courier New,Courier,monospace" font-size="13" fill="{{.AccentColor}}">{{.Class}}</text>
   <text x="14" y="74" font-family="Courier New,Courier,monospace" font-size="9" fill="#AA88DD" font-style="italic">{{.Title}}</text>
-  <line x1="10" y1="80" x2="328" y2="80" stroke="#3A1A7A" stroke-width="1"/>
-  <polygon points="346,75 354,80 346,85 338,80" fill="#FFD700"/>
-  <line x1="362" y1="80" x2="685" y2="80" stroke="#3A1A7A" stroke-width="1"/>
+  <line x1="10" y1="80" x2="685" y2="80" stroke="#3A1A7A" stroke-width="1"/>
   <line x1="362" y1="80" x2="362" y2="256" stroke="#3A1A7A" stroke-width="1"/>
+  <polygon points="362,77 365,80 362,83 359,80" fill="{{.AccentColor}}"/>
+  <polygon points="362,254 365,257 362,260 359,257" fill="{{.AccentColor}}"/>
   <image x="14" y="89" width="14" height="14" href="{{.StatIconPower}}" image-rendering="pixelated"/>
   <text x="32" y="101" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">POWER</text>
   <text x="175" y="101" font-family="Courier New,Courier,monospace" font-size="13" font-weight="bold" fill="{{.AccentColor}}" text-anchor="end">{{.STR}}</text>
