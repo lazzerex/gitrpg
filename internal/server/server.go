@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 	"github.com/lazzerex/gitrpg/internal/auth"
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
+	"github.com/lazzerex/gitrpg/internal/equipment"
+	"github.com/lazzerex/gitrpg/internal/leaderboards"
 	"github.com/lazzerex/gitrpg/internal/stats"
 	svgpkg "github.com/lazzerex/gitrpg/internal/svg"
 	"github.com/lazzerex/gitrpg/internal/users"
@@ -38,10 +41,12 @@ type Server struct {
 	users        *users.Store
 	characters   *characters.Service
 	achievements *achievements.Service
+	equipment    *equipment.Service
+	leaderboards *leaderboards.Service
 	syncStart    sync.Map // userID int64 → time.Time
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, userStore *users.Store) *Server {
+func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, lbSvc *leaderboards.Service, userStore *users.Store) *Server {
 	authHandler := auth.NewHandler(cfg, userStore, logger)
 	authHandler.SetPostLogin(w.SyncUser)
 
@@ -56,14 +61,37 @@ func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.L
 		users:        userStore,
 		characters:   charSvc,
 		achievements: achSvc,
+		equipment:    eqSvc,
+		leaderboards: lbSvc,
 	}
 	s.registerMiddleware()
 	s.registerRoutes()
 	return s
 }
 
+var classIcons = map[string]string{
+	"Guardian":   "shield",
+	"Knight":     "sword",
+	"Paladin":    "scroll-text",
+	"Berserker":  "axe",
+	"Warlord":    "flame",
+	"Sage":       "book-open",
+	"Battlemage": "wand-2",
+	"Rogue":      "key",
+	"Wanderer":   "compass",
+}
+
 var templateFuncs = template.FuncMap{
 	"inc": func(n int) int { return n + 1 },
+	"add": func(a, b int) int { return a + b },
+	"sub": func(a, b int) int { return a - b },
+	"classIcon": func(class string) string {
+		icon, ok := classIcons[class]
+		if !ok {
+			return "compass"
+		}
+		return icon
+	},
 	"xpPercent": func(into, for_ int) int {
 		if for_ <= 0 {
 			return 0
@@ -104,7 +132,7 @@ var templateFuncs = template.FuncMap{
 // LoadTemplates builds a per-page template set (base.html + page) for each page
 // in dir. Each page gets its own isolated set so {{define "content"}} blocks don't collide.
 func (s *Server) LoadTemplates(dir string) error {
-	pages := []string{"index.html", "profile.html", "public.html", "cards.html"}
+	pages := []string{"index.html", "profile.html", "public.html", "cards.html", "leaderboard.html"}
 	base := filepath.Join(dir, "base.html")
 	partial := filepath.Join(dir, "partials", "char-panel.html")
 	s.templates = make(map[string]*template.Template, len(pages)+1)
@@ -142,6 +170,18 @@ func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	}
 }
 
+func (s *Server) renderFragment(w http.ResponseWriter, tmplName, blockName string, data any) {
+	tmpl, ok := s.templates[tmplName]
+	if !ok {
+		http.Error(w, "template not found: "+tmplName, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, blockName, data); err != nil {
+		s.logger.Error("template render failed", "name", blockName, "error", err)
+	}
+}
+
 func (s *Server) registerMiddleware() {
 	s.router.Use(middleware.RequestID)
 	s.router.Use(middleware.Recoverer)
@@ -163,6 +203,7 @@ func (s *Server) registerRoutes() {
 
 	s.router.Get("/u/{username}", s.handlePublicProfile)
 	s.router.Get("/cards", s.handleCards)
+	s.router.Get("/leaderboard", s.handleLeaderboard)
 
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.auth.RequireAuth)
@@ -207,6 +248,11 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("achievements load failed", "user_id", user.ID, "error", err)
 	}
 
+	loadout, err := s.equipment.GetForUser(r.Context(), user.ID)
+	if err != nil {
+		s.logger.Error("equipment load failed", "user_id", user.ID, "error", err)
+	}
+
 	s.render(w, "profile.html", profileData{
 		User:         user,
 		Character:    char,
@@ -214,6 +260,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		AccentColor:  accentColor,
 		BaseURL:      requestBaseURL(r),
 		Achievements: achs,
+		Equipment:    loadout,
 	})
 }
 
@@ -295,6 +342,7 @@ type profileData struct {
 	AccentColor  string
 	BaseURL      string
 	Achievements []achievements.UserAchievement
+	Equipment    equipment.Loadout
 }
 
 type publicProfileData struct {
@@ -304,6 +352,7 @@ type publicProfileData struct {
 	AccentColor  string
 	BaseURL      string
 	Achievements []achievements.UserAchievement
+	Equipment    equipment.Loadout
 }
 
 func (s *Server) baseData(r *http.Request) baseData {
@@ -341,6 +390,11 @@ func (s *Server) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("achievements load failed", "user_id", profileUser.ID, "error", err)
 	}
 
+	loadout, err := s.equipment.GetForUser(r.Context(), profileUser.ID)
+	if err != nil {
+		s.logger.Error("equipment load failed", "user_id", profileUser.ID, "error", err)
+	}
+
 	s.render(w, "public.html", publicProfileData{
 		User:         viewer,
 		ProfileUser:  profileUser,
@@ -348,11 +402,36 @@ func (s *Server) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 		AccentColor:  accentColor,
 		BaseURL:      requestBaseURL(r),
 		Achievements: achs,
+		Equipment:    loadout,
 	})
 }
 
 func (s *Server) handleCards(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "cards.html", s.baseData(r))
+}
+
+type leaderboardData struct {
+	User        *users.User
+	Leaderboard leaderboards.Page
+}
+
+func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+
+	lb, err := s.leaderboards.GetXPPage(r.Context(), page)
+	if err != nil {
+		s.logger.Error("leaderboard load failed", "error", err)
+		http.Error(w, "leaderboard unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	data := leaderboardData{User: s.baseData(r).User, Leaderboard: lb}
+
+	if r.Header.Get("HX-Request") == "true" {
+		s.renderFragment(w, "leaderboard.html", "leaderboard-results", data)
+		return
+	}
+	s.render(w, "leaderboard.html", data)
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {
