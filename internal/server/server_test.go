@@ -37,7 +37,7 @@ func TestLeaderboardResultsFragmentExecutes(t *testing.T) {
 		{"single entry, page 1", leaderboardData{
 			Leaderboard: leaderboards.Page{Entries: []leaderboards.Entry{entry(1, "octocat")}, Page: 1, TotalPages: 1},
 		}},
-		{"full podium plus overflow list, page 1", leaderboardData{
+		{"multiple entries, page 1", leaderboardData{
 			Leaderboard: leaderboards.Page{
 				Entries: []leaderboards.Entry{
 					entry(1, "a"), entry(2, "b"), entry(3, "c"), entry(4, "d"), entry(5, "e"),
@@ -45,7 +45,7 @@ func TestLeaderboardResultsFragmentExecutes(t *testing.T) {
 				Page: 1, TotalPages: 2,
 			},
 		}},
-		{"page 2, no podium", leaderboardData{
+		{"page 2", leaderboardData{
 			Leaderboard: leaderboards.Page{Entries: []leaderboards.Entry{entry(51, "z")}, Page: 2, TotalPages: 2},
 		}},
 		{"empty leaderboard", leaderboardData{
