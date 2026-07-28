@@ -427,11 +427,17 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 	data := leaderboardData{User: s.baseData(r).User, Leaderboard: lb}
 
-	if r.Header.Get("HX-Request") == "true" {
+	if wantsLeaderboardFragment(r) {
 		s.renderFragment(w, "leaderboard.html", "leaderboard-results", data)
 		return
 	}
 	s.render(w, "leaderboard.html", data)
+}
+
+// Plain hx-boost nav also sends HX-Request, so check HX-Target instead -
+// only the pagination links set hx-target="#leaderboard-results".
+func wantsLeaderboardFragment(r *http.Request) bool {
+	return r.Header.Get("HX-Target") == "leaderboard-results"
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {
