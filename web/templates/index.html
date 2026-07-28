@@ -28,7 +28,7 @@
                     <i data-lucide="user" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>MY CHARACTER
                 </a>
                 {{else}}
-                <a href="/auth/github" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
+                <a href="/auth/github" hx-boost="false" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
                     <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START QUEST
                 </a>
                 {{end}}
@@ -109,7 +109,7 @@
         {{if .User}}
         <a href="/profile" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
         {{else}}
-        <a href="/auth/github" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
+        <a href="/auth/github" hx-boost="false" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
         {{end}}
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <i data-lucide="user" style="width:18px;height:18px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
@@ -122,7 +122,7 @@
         {{if .User}}
         <a href="/profile" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
         {{else}}
-        <a href="/auth/github" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
+        <a href="/auth/github" hx-boost="false" class="px-panel px-hoverable" style="padding:22px;position:relative;overflow:hidden;min-height:120px;">
         {{end}}
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <i data-lucide="bar-chart-2" style="width:18px;height:18px;stroke:var(--gold);stroke-width:2;flex-shrink:0;"></i>
