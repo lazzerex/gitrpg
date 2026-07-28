@@ -7,6 +7,7 @@ import (
 
 	"github.com/lazzerex/gitrpg/internal/achievements"
 	"github.com/lazzerex/gitrpg/internal/characters"
+	"github.com/lazzerex/gitrpg/internal/equipment"
 	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/stats"
 	"github.com/lazzerex/gitrpg/internal/users"
@@ -17,16 +18,18 @@ type Worker struct {
 	github       *github.Service
 	characters   *characters.Service
 	achievements *achievements.Service
+	equipment    *equipment.Service
 	userStore    *users.Store
 	logger       *slog.Logger
 }
 
 // New creates a Worker.
-func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, userStore *users.Store, logger *slog.Logger) *Worker {
+func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, userStore *users.Store, logger *slog.Logger) *Worker {
 	return &Worker{
 		github:       githubSvc,
 		characters:   charSvc,
 		achievements: achSvc,
+		equipment:    eqSvc,
 		userStore:    userStore,
 		logger:       logger,
 	}
@@ -88,6 +91,10 @@ func (w *Worker) SyncUser(user *users.User) {
 
 		if err := w.achievements.EvaluateAndSave(ctx, user.ID, gs); err != nil {
 			w.logger.Error("achievement eval failed", "user_id", user.ID, "error", err)
+		}
+
+		if err := w.equipment.EvaluateAndSave(ctx, user.ID, gs); err != nil {
+			w.logger.Error("equipment eval failed", "user_id", user.ID, "error", err)
 		}
 
 		w.logger.Info("sync complete",
