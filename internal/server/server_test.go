@@ -2,11 +2,46 @@ package server
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
 	"github.com/lazzerex/gitrpg/internal/users"
 )
+
+func TestWantsLeaderboardFragment(t *testing.T) {
+	cases := []struct {
+		name       string
+		hxRequest  string
+		hxTarget   string
+		hxBoosted  string
+		wantResult bool
+	}{
+		{"pagination click: hx-target set", "true", "leaderboard-results", "", true},
+		{"boosted nav click: no hx-target", "true", "", "true", false},
+		{"plain browser request", "", "", "", false},
+		{"hx-request true but wrong target", "true", "some-other-id", "", false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/leaderboard", nil)
+			if c.hxRequest != "" {
+				req.Header.Set("HX-Request", c.hxRequest)
+			}
+			if c.hxTarget != "" {
+				req.Header.Set("HX-Target", c.hxTarget)
+			}
+			if c.hxBoosted != "" {
+				req.Header.Set("HX-Boosted", c.hxBoosted)
+			}
+			if got := wantsLeaderboardFragment(req); got != c.wantResult {
+				t.Errorf("wantsLeaderboardFragment() = %v, want %v", got, c.wantResult)
+			}
+		})
+	}
+}
 
 func TestLoadTemplates(t *testing.T) {
 	s := &Server{}
