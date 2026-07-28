@@ -1,0 +1,113 @@
+{{template "base.html" .}}
+
+{{define "title"}}Leaderboard — GitHub RPG{{end}}
+
+{{define "content"}}
+<div style="max-width:700px;margin:0 auto;padding:40px 16px 64px;">
+
+    <div style="text-align:center;margin-bottom:40px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border:4px solid var(--gold);background:var(--panel);box-shadow:4px 4px 0 #000;margin-bottom:20px;">
+            <i data-lucide="trophy" style="width:28px;height:28px;stroke:var(--gold);stroke-width:1.5;"></i>
+        </div>
+        <h1 style="color:var(--gold);font-size:18px;text-shadow:3px 3px 0 #000;margin-bottom:14px;">LEADERBOARD</h1>
+        <p style="color:var(--muted);font-size:8px;line-height:2;">TOP DEVELOPERS RANKED BY TOTAL XP</p>
+    </div>
+
+    {{template "leaderboard-results" .}}
+
+</div>
+{{end}}
+
+{{define "leaderboard-results"}}
+<div id="leaderboard-results">
+    {{$root := .}}
+    {{$entries := .Leaderboard.Entries}}
+
+    {{if eq .Leaderboard.Page 1}}
+    <div class="lb-podium">
+        {{if ge (len $entries) 2}}
+        {{with index $entries 1}}
+        <a href="/u/{{.Login}}" class="px-hoverable lb-podium-card lb-podium-2">
+            <p class="lb-medal">🥈</p>
+            {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" class="lb-podium-avatar">{{end}}
+            <p style="font-size:8px;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}</p>
+            <p style="font-size:7px;color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;"><i data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--cyan);stroke-width:2;"></i>{{.Class}}</p>
+            <p style="font-size:7px;color:var(--green);">{{.TotalXP}} XP</p>
+        </a>
+        {{end}}
+        {{else}}<div></div>{{end}}
+
+        {{if ge (len $entries) 1}}
+        {{with index $entries 0}}
+        <a href="/u/{{.Login}}" class="px-hoverable lb-podium-card lb-podium-1">
+            <p class="lb-medal">👑</p>
+            {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" class="lb-podium-avatar">{{end}}
+            <p style="font-size:9px;color:var(--gold);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}</p>
+            <p style="font-size:7px;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;"><i data-lucide="{{classIcon .Class}}" style="width:11px;height:11px;stroke:var(--gold);stroke-width:2;"></i>{{.Class}} &#183; LV {{.Level}}</p>
+            <p style="font-size:8px;color:var(--green);">{{.TotalXP}} XP</p>
+        </a>
+        {{end}}
+        {{else}}<div></div>{{end}}
+
+        {{if ge (len $entries) 3}}
+        {{with index $entries 2}}
+        <a href="/u/{{.Login}}" class="px-hoverable lb-podium-card lb-podium-3">
+            <p class="lb-medal">🥉</p>
+            {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" class="lb-podium-avatar">{{end}}
+            <p style="font-size:8px;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}</p>
+            <p style="font-size:7px;color:var(--border-hi);display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;"><i data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--border-hi);stroke-width:2;"></i>{{.Class}}</p>
+            <p style="font-size:7px;color:var(--green);">{{.TotalXP}} XP</p>
+        </a>
+        {{end}}
+        {{else}}<div></div>{{end}}
+    </div>
+    {{end}}
+
+    {{$hasList := false}}
+    {{range $i, $e := $entries}}{{if or (ne $root.Leaderboard.Page 1) (ge $i 3)}}{{$hasList = true}}{{end}}{{end}}
+
+    {{if $hasList}}
+    <div class="px-panel" style="padding:24px;margin-bottom:24px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            {{range $i, $e := $entries}}
+            {{if or (ne $root.Leaderboard.Page 1) (ge $i 3)}}
+            <a href="/u/{{$e.Login}}" class="px-hoverable lb-row{{if and $root.User (eq $e.Login $root.User.Login)}} lb-row-you{{end}}">
+                <span style="color:var(--gold);font-size:10px;width:32px;flex-shrink:0;">#{{$e.Rank}}</span>
+                {{if $e.AvatarURL}}
+                <img src="{{$e.AvatarURL}}" alt="" style="width:24px;height:24px;image-rendering:pixelated;flex-shrink:0;">
+                {{end}}
+                <span style="flex:1;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{$e.Login}}{{if and $root.User (eq $e.Login $root.User.Login)}} <span style="color:var(--gold);">(YOU)</span>{{end}}</span>
+                <span style="font-size:7px;color:var(--muted);flex-shrink:0;display:flex;align-items:center;gap:4px;"><i data-lucide="{{classIcon $e.Class}}" style="width:10px;height:10px;stroke:var(--muted);stroke-width:2;"></i>{{$e.Class}}</span>
+                <span style="font-size:8px;color:var(--cyan);flex-shrink:0;width:48px;text-align:right;">LV {{$e.Level}}</span>
+                <span style="font-size:8px;color:var(--green);flex-shrink:0;width:72px;text-align:right;">{{$e.TotalXP}} XP</span>
+            </a>
+            {{end}}
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+
+    {{if not $entries}}
+    <div class="px-panel" style="padding:24px;margin-bottom:24px;">
+        <p style="color:var(--muted);font-size:8px;text-align:center;padding:20px 0;">NO CHARACTERS YET.</p>
+    </div>
+    {{end}}
+
+    {{if or .Leaderboard.HasPrev .Leaderboard.HasNext}}
+    <div style="display:flex;justify-content:center;align-items:center;gap:16px;">
+        {{if .Leaderboard.HasPrev}}
+        <a href="/leaderboard?page={{sub .Leaderboard.Page 1}}"
+           hx-get="/leaderboard?page={{sub .Leaderboard.Page 1}}" hx-target="#leaderboard-results" hx-swap="outerHTML" hx-push-url="true"
+           class="px-btn" style="font-size:8px;padding:8px 14px;">&laquo; PREV</a>
+        {{end}}
+        <span style="color:var(--muted);font-size:8px;">PAGE {{.Leaderboard.Page}} / {{.Leaderboard.TotalPages}}</span>
+        {{if .Leaderboard.HasNext}}
+        <a href="/leaderboard?page={{add .Leaderboard.Page 1}}"
+           hx-get="/leaderboard?page={{add .Leaderboard.Page 1}}" hx-target="#leaderboard-results" hx-swap="outerHTML" hx-push-url="true"
+           class="px-btn" style="font-size:8px;padding:8px 14px;">NEXT &raquo;</a>
+        {{end}}
+    </div>
+    {{end}}
+
+</div>
+{{end}}
