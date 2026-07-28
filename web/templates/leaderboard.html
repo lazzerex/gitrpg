@@ -20,78 +20,27 @@
 
 {{define "leaderboard-results"}}
 <div id="leaderboard-results">
-    {{$root := .}}
-    {{$entries := .Leaderboard.Entries}}
 
-    {{if eq .Leaderboard.Page 1}}
-    <div class="lb-podium">
-        {{if ge (len $entries) 2}}
-        {{with index $entries 1}}
-        <a href="/u/{{.Login}}" class="px-hoverable lb-podium-card lb-podium-2">
-            <p class="lb-medal">🥈</p>
-            {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" class="lb-podium-avatar">{{end}}
-            <p style="font-size:8px;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}</p>
-            <p style="font-size:7px;color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;"><i data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--cyan);stroke-width:2;"></i>{{.Class}}</p>
-            <p style="font-size:7px;color:var(--green);">{{.TotalXP}} XP</p>
-        </a>
-        {{end}}
-        {{else}}<div></div>{{end}}
-
-        {{if ge (len $entries) 1}}
-        {{with index $entries 0}}
-        <a href="/u/{{.Login}}" class="px-hoverable lb-podium-card lb-podium-1">
-            <p class="lb-medal">👑</p>
-            {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" class="lb-podium-avatar">{{end}}
-            <p style="font-size:9px;color:var(--gold);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}</p>
-            <p style="font-size:7px;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;"><i data-lucide="{{classIcon .Class}}" style="width:11px;height:11px;stroke:var(--gold);stroke-width:2;"></i>{{.Class}} &#183; LV {{.Level}}</p>
-            <p style="font-size:8px;color:var(--green);">{{.TotalXP}} XP</p>
-        </a>
-        {{end}}
-        {{else}}<div></div>{{end}}
-
-        {{if ge (len $entries) 3}}
-        {{with index $entries 2}}
-        <a href="/u/{{.Login}}" class="px-hoverable lb-podium-card lb-podium-3">
-            <p class="lb-medal">🥉</p>
-            {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" class="lb-podium-avatar">{{end}}
-            <p style="font-size:8px;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}</p>
-            <p style="font-size:7px;color:var(--border-hi);display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;"><i data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--border-hi);stroke-width:2;"></i>{{.Class}}</p>
-            <p style="font-size:7px;color:var(--green);">{{.TotalXP}} XP</p>
-        </a>
-        {{end}}
-        {{else}}<div></div>{{end}}
-    </div>
-    {{end}}
-
-    {{$hasList := false}}
-    {{range $i, $e := $entries}}{{if or (ne $root.Leaderboard.Page 1) (ge $i 3)}}{{$hasList = true}}{{end}}{{end}}
-
-    {{if $hasList}}
     <div class="px-panel" style="padding:24px;margin-bottom:24px;">
+        {{if .Leaderboard.Entries}}
         <div style="display:flex;flex-direction:column;gap:8px;">
-            {{range $i, $e := $entries}}
-            {{if or (ne $root.Leaderboard.Page 1) (ge $i 3)}}
-            <a href="/u/{{$e.Login}}" class="px-hoverable lb-row{{if and $root.User (eq $e.Login $root.User.Login)}} lb-row-you{{end}}">
-                <span style="color:var(--gold);font-size:10px;width:32px;flex-shrink:0;">#{{$e.Rank}}</span>
-                {{if $e.AvatarURL}}
-                <img src="{{$e.AvatarURL}}" alt="" style="width:24px;height:24px;image-rendering:pixelated;flex-shrink:0;">
+            {{range .Leaderboard.Entries}}
+            <a href="/u/{{.Login}}" class="px-hoverable lb-row{{if and $.User (eq .Login $.User.Login)}} lb-row-you{{end}}" style="display:flex;align-items:center;gap:14px;">
+                <span style="color:var(--gold);font-size:10px;width:32px;flex-shrink:0;">#{{.Rank}}</span>
+                {{if .AvatarURL}}
+                <img src="{{.AvatarURL}}" alt="" style="width:24px;height:24px;border-radius:50%;flex-shrink:0;">
                 {{end}}
-                <span style="flex:1;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{$e.Login}}{{if and $root.User (eq $e.Login $root.User.Login)}} <span style="color:var(--gold);">(YOU)</span>{{end}}</span>
-                <span style="font-size:7px;color:var(--muted);flex-shrink:0;display:flex;align-items:center;gap:4px;"><i data-lucide="{{classIcon $e.Class}}" style="width:10px;height:10px;stroke:var(--muted);stroke-width:2;"></i>{{$e.Class}}</span>
-                <span style="font-size:8px;color:var(--cyan);flex-shrink:0;width:48px;text-align:right;">LV {{$e.Level}}</span>
-                <span style="font-size:8px;color:var(--green);flex-shrink:0;width:72px;text-align:right;">{{$e.TotalXP}} XP</span>
+                <span style="flex:1;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}{{if and $.User (eq .Login $.User.Login)}} <span style="color:var(--gold);">(YOU)</span>{{end}}</span>
+                <span style="font-size:7px;color:var(--muted);flex-shrink:0;display:flex;align-items:center;gap:4px;"><i data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--muted);stroke-width:2;"></i>{{.Class}}</span>
+                <span style="font-size:8px;color:var(--cyan);flex-shrink:0;width:48px;text-align:right;">LV {{.Level}}</span>
+                <span style="font-size:8px;color:var(--green);flex-shrink:0;width:72px;text-align:right;">{{.TotalXP}} XP</span>
             </a>
             {{end}}
-            {{end}}
         </div>
-    </div>
-    {{end}}
-
-    {{if not $entries}}
-    <div class="px-panel" style="padding:24px;margin-bottom:24px;">
+        {{else}}
         <p style="color:var(--muted);font-size:8px;text-align:center;padding:20px 0;">NO CHARACTERS YET.</p>
+        {{end}}
     </div>
-    {{end}}
 
     {{if or .Leaderboard.HasPrev .Leaderboard.HasNext}}
     <div style="display:flex;justify-content:center;align-items:center;gap:16px;">
