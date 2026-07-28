@@ -88,7 +88,7 @@ var templateFuncs = template.FuncMap{
 	"classIcon": func(class string) string {
 		icon, ok := classIcons[class]
 		if !ok {
-			return "compass"
+			return classIcons["Wanderer"]
 		}
 		return icon
 	},
