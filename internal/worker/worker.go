@@ -62,6 +62,13 @@ func (w *Worker) syncAll(ctx context.Context) {
 			return
 		default:
 		}
+		needsSync, err := w.github.NeedsSync(ctx, u)
+		if err != nil {
+			w.logger.Warn("worker: activity check failed, syncing anyway", "user_id", u.ID, "login", u.Login, "error", err)
+		} else if !needsSync {
+			w.logger.Info("worker: skip sync, no new activity", "user_id", u.ID, "login", u.Login)
+			continue
+		}
 		w.SyncUser(u)
 	}
 }
