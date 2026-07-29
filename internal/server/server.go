@@ -192,8 +192,14 @@ func (s *Server) registerMiddleware() {
 	s.router.Use(s.auth.LoadUser)
 }
 
+// importmapHash pins the sole remaining inline <script> in base.html (a
+// type="importmap" block — the Import Maps spec needs it inline for browser
+// support, so it can't move to an external file like the rest of the JS did).
+// Recompute if that script's content changes even by one byte of whitespace.
+const importmapHash = "'sha256-/LPWhjT5pvTvaGMtuaM1D1UezzGKyq0GNIvBMjhCUgY='"
+
 const cspPolicy = "default-src 'self'; " +
-	"script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; " +
+	"script-src 'self' " + importmapHash + " https://unpkg.com https://cdn.jsdelivr.net; " +
 	"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
 	"font-src 'self' https://fonts.gstatic.com; " +
 	"img-src 'self' data: https:; " +
@@ -217,6 +223,8 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 func (s *Server) registerRoutes() {
 	s.router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	s.router.Get("/health", s.handleHealth)
+	s.router.Get("/robots.txt", s.handleRobotsTxt)
+	s.router.Get("/sitemap.xml", s.handleSitemap)
 	s.router.Get("/", s.handleIndex)
 
 	s.router.Get("/auth/github", s.auth.Login)
@@ -247,7 +255,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 			charClass = char.Class
 		}
 	}
-	s.render(w, "index.html", indexData{User: u, CharClass: charClass})
+	s.render(w, "index.html", indexData{User: u, CharClass: charClass, BaseURL: requestBaseURL(r)})
 }
 
 func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
@@ -322,6 +330,24 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	startTime := startVal.(time.Time)
 
+	char, err := s.characters.GetByUserID(r.Context(), user.ID)
+	if err == nil && char != nil && char.UpdatedAt.After(startTime) {
+		s.syncStart.Delete(user.ID)
+		_ = s.redis.Del(r.Context(), "svg:card:"+user.Login).Err()
+		w.Header().Set("HX-Redirect", "/profile")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if syncStatus, statusErr := s.worker.LatestSyncStatus(r.Context(), user.ID); statusErr == nil &&
+		syncStatus != nil && syncStatus.Status == "failed" &&
+		syncStatus.CompletedAt != nil && syncStatus.CompletedAt.After(startTime) {
+		s.syncStart.Delete(user.ID)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, syncErrorHTML)
+		return
+	}
+
 	if time.Since(startTime) > 3*time.Minute {
 		s.syncStart.Delete(user.ID)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -329,21 +355,13 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	char, err := s.characters.GetByUserID(r.Context(), user.ID)
-	if err != nil || char == nil || !char.UpdatedAt.After(startTime) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, syncingHTML)
-		return
-	}
-
-	s.syncStart.Delete(user.ID)
-	_ = s.redis.Del(r.Context(), "svg:card:"+user.Login).Err()
-
-	w.Header().Set("HX-Redirect", "/profile")
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = fmt.Fprint(w, syncingHTML)
 }
 
-const syncBtnHTML = `<div id="sync-status"><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW</button></div>`
+const syncBtnHTML = `<div id="sync-status"><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i aria-hidden="true" data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW</button></div>`
+
+const syncErrorHTML = `<div id="sync-status"><p style="color:var(--red);font-size:8px;margin-bottom:8px;">SYNC FAILED. TRY AGAIN?</p><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn px-btn-red" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i aria-hidden="true" data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--red);stroke-width:2;"></i>RETRY SYNC</button></div>`
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -364,13 +382,32 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"status":"ok"}`)
 }
 
+func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /profile\nDisallow: /sync\n\nSitemap: %s/sitemap.xml\n", requestBaseURL(r))
+}
+
+func (s *Server) handleSitemap(w http.ResponseWriter, r *http.Request) {
+	base := requestBaseURL(r)
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>%s/</loc></url>
+  <url><loc>%s/cards</loc></url>
+  <url><loc>%s/leaderboard</loc></url>
+</urlset>
+`, base, base, base)
+}
+
 type baseData struct {
-	User *users.User
+	User    *users.User
+	BaseURL string
 }
 
 type indexData struct {
 	User      *users.User
 	CharClass string
+	BaseURL   string
 }
 
 type profileData struct {
@@ -395,7 +432,7 @@ type publicProfileData struct {
 
 func (s *Server) baseData(r *http.Request) baseData {
 	u, _ := r.Context().Value(users.ContextKey).(*users.User)
-	return baseData{User: u}
+	return baseData{User: u, BaseURL: requestBaseURL(r)}
 }
 
 func requestBaseURL(r *http.Request) string {
@@ -459,6 +496,7 @@ func (s *Server) handleCards(w http.ResponseWriter, r *http.Request) {
 type leaderboardData struct {
 	User        *users.User
 	Leaderboard leaderboards.Page
+	BaseURL     string
 }
 
 func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
@@ -471,7 +509,7 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := leaderboardData{User: s.baseData(r).User, Leaderboard: lb}
+	data := leaderboardData{User: s.baseData(r).User, Leaderboard: lb, BaseURL: requestBaseURL(r)}
 
 	if wantsLeaderboardFragment(r) {
 		s.renderFragment(w, "leaderboard.html", "leaderboard-results", data)
