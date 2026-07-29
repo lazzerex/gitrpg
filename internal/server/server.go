@@ -203,7 +203,7 @@ const cspPolicy = "default-src 'self'; " +
 	"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
 	"font-src 'self' https://fonts.gstatic.com; " +
 	"img-src 'self' data: blob: https:; " +
-	"connect-src 'self'; " +
+	"connect-src 'self' blob: https://unpkg.com; " +
 	"frame-ancestors 'none'"
 
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
