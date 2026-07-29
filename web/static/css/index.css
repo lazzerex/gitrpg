@@ -1,0 +1,23 @@
+/* Flanking idle sprites */
+.rpg-sprite {
+    width: 150px; height: 150px;
+    image-rendering: pixelated;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+}
+.rpg-sprite--soldier {
+    background-image: url('/static/assets/sprites/Soldier-Idle.png');
+    background-size: 900px 150px;
+    animation: rpg-idle-6 0.72s steps(6) infinite;
+}
+.rpg-sprite--orc {
+    background-image: url('/static/assets/sprites/Orc-Idle.png');
+    background-size: 900px 150px;
+    animation: rpg-idle-6 0.96s steps(6) infinite;
+}
+@keyframes rpg-idle-6 {
+    from { background-position: 0 0; }
+    to   { background-position: -900px 0; }
+}
+
+@media (max-width: 640px) { .rpg-sprite { display: none; } }
