@@ -3,8 +3,10 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -78,6 +80,21 @@ func (s *store) completeSync(ctx context.Context, id int64, pointsUsed int, sync
 		WHERE id=$5
 	`, time.Now(), status, pointsUsed, errMsg, id)
 	return err
+}
+
+// getLastSyncedAt returns the last successful stats sync time for a user.
+// ok is false if the user has never been synced.
+func (s *store) getLastSyncedAt(ctx context.Context, userID int64) (t time.Time, ok bool, err error) {
+	err = s.db.QueryRow(ctx,
+		`SELECT synced_at FROM github_stats WHERE user_id=$1`, userID,
+	).Scan(&t)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, false, nil
+	}
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return t, true, nil
 }
 
 func (s *store) getStats(ctx context.Context, userID int64) (*Stats, error) {
