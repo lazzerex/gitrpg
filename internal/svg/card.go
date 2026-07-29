@@ -2,6 +2,7 @@ package svg
 
 import (
 	"bytes"
+	"html"
 	"text/template"
 
 	"github.com/lazzerex/gitrpg/internal/stats"
@@ -198,7 +199,7 @@ func buildData(login string, char *stats.Character) cardData {
 		icon = iconGem
 	}
 	return cardData{
-		Login:             login,
+		Login:             html.EscapeString(login),
 		Level:             char.Level,
 		NextLevel:         char.Level + 1,
 		Class:             char.Class,
