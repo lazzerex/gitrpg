@@ -2,13 +2,73 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
+	"github.com/lazzerex/gitrpg/internal/stats"
 	"github.com/lazzerex/gitrpg/internal/users"
 )
+
+var importmapScriptRe = regexp.MustCompile(`(?s)<script type="importmap">(.*?)</script>`)
+
+func TestImportmapHash_MatchesTemplate(t *testing.T) {
+	content, err := os.ReadFile("../../web/templates/base.html")
+	if err != nil {
+		t.Fatalf("read base.html: %v", err)
+	}
+	m := importmapScriptRe.FindSubmatch(content)
+	if m == nil {
+		t.Fatal("no importmap script found in base.html")
+	}
+	digest := sha256.Sum256(m[1])
+	want := "'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'"
+	if want != importmapHash {
+		t.Errorf("importmapHash is stale: base.html's importmap script hashes to %s, but importmapHash = %s.\n"+
+			"The CSP will silently block this script until the constant is updated to match.", want, importmapHash)
+	}
+}
+
+func TestPageTemplates_ExecuteWithoutError(t *testing.T) {
+	s := &Server{}
+	if err := s.LoadTemplates("../../web/templates"); err != nil {
+		t.Fatalf("LoadTemplates failed: %v", err)
+	}
+
+	user := &users.User{Login: "octocat"}
+	char := &stats.Character{Level: 5, Class: "Guardian", Title: "The Adventurer"}
+
+	cases := []struct {
+		name string
+		tmpl string
+		data any
+	}{
+		{"index, anonymous", "index.html", indexData{BaseURL: "https://example.com"}},
+		{"index, logged in", "index.html", indexData{User: user, CharClass: "Guardian", BaseURL: "https://example.com"}},
+		{"profile", "profile.html", profileData{User: user, Character: char, BaseURL: "https://example.com"}},
+		{"public profile, synced", "public.html", publicProfileData{ProfileUser: user, Character: char, BaseURL: "https://example.com"}},
+		{"public profile, unsynced", "public.html", publicProfileData{ProfileUser: user, BaseURL: "https://example.com"}},
+		{"cards", "cards.html", baseData{BaseURL: "https://example.com"}},
+		{"leaderboard", "leaderboard.html", leaderboardData{BaseURL: "https://example.com"}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := s.templates[c.tmpl].ExecuteTemplate(&buf, "base.html", c.data); err != nil {
+				t.Fatalf("execute %s: %v", c.tmpl, err)
+			}
+			if buf.Len() == 0 {
+				t.Fatal("expected non-empty output")
+			}
+		})
+	}
+}
 
 func TestGithubUsernameRe(t *testing.T) {
 	cases := []struct {
