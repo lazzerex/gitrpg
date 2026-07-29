@@ -97,6 +97,23 @@ func (s *store) getLastSyncedAt(ctx context.Context, userID int64) (t time.Time,
 	return t, true, nil
 }
 
+// getLatestSync returns the most recent sync attempt for a user.
+// ok is false if the user has never had a sync attempt.
+func (s *store) getLatestSync(ctx context.Context, userID int64) (status string, completedAt *time.Time, errMsg string, ok bool, err error) {
+	err = s.db.QueryRow(ctx, `
+		SELECT status, completed_at, COALESCE(error, '')
+		FROM github_syncs WHERE user_id=$1
+		ORDER BY started_at DESC LIMIT 1
+	`, userID).Scan(&status, &completedAt, &errMsg)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil, "", false, nil
+	}
+	if err != nil {
+		return "", nil, "", false, err
+	}
+	return status, completedAt, errMsg, true, nil
+}
+
 func (s *store) getStats(ctx context.Context, userID int64) (*Stats, error) {
 	var stats Stats
 	var langStr string
