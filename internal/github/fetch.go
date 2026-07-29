@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 // contributionsCollection covers only the most recent year.
@@ -141,6 +142,48 @@ type RawStats struct {
 	AllRepos     []RawRepo
 	Calendar     []CalendarDay
 	PointsUsed   int
+}
+
+const activityQuery = `
+query($login: String!, $from: DateTime!) {
+  rateLimit { cost }
+  user(login: $login) {
+    contributionsCollection(from: $from) {
+      totalCommitContributions
+      totalPullRequestContributions
+      totalPullRequestReviewContributions
+      totalIssueContributions
+    }
+  }
+}`
+
+type activityResult struct {
+	User *struct {
+		ContributionsCollection struct {
+			TotalCommitContributions            int `json:"totalCommitContributions"`
+			TotalPullRequestContributions       int `json:"totalPullRequestContributions"`
+			TotalPullRequestReviewContributions int `json:"totalPullRequestReviewContributions"`
+			TotalIssueContributions             int `json:"totalIssueContributions"`
+		} `json:"contributionsCollection"`
+	} `json:"user"`
+}
+
+// hasActivity checks cheaply whether the user has any GitHub activity since the
+// given time, so the caller can skip a full fetch for idle users.
+func hasActivity(ctx context.Context, token, login string, since time.Time, logger *slog.Logger) (bool, error) {
+	c := newClient(token, logger)
+	var ar activityResult
+	if err := c.query(ctx, activityQuery, map[string]any{"login": login, "from": since.Format(time.RFC3339)}, &ar); err != nil {
+		return false, err
+	}
+	if ar.User == nil {
+		return false, fmt.Errorf("github user not found: %s", login)
+	}
+	cc := ar.User.ContributionsCollection
+	return cc.TotalCommitContributions > 0 ||
+		cc.TotalPullRequestContributions > 0 ||
+		cc.TotalPullRequestReviewContributions > 0 ||
+		cc.TotalIssueContributions > 0, nil
 }
 
 func fetch(ctx context.Context, token, login string, logger *slog.Logger) (*RawStats, error) {
