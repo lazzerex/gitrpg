@@ -73,6 +73,10 @@ func (w *Worker) syncAll(ctx context.Context) {
 	}
 }
 
+func (w *Worker) LatestSyncStatus(ctx context.Context, userID int64) (*github.SyncStatus, error) {
+	return w.github.LatestSyncStatus(ctx, userID)
+}
+
 // SyncUser triggers an immediate sync and character computation for the given user.
 func (w *Worker) SyncUser(user *users.User) {
 	go func() {
