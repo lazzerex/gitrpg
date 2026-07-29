@@ -1,3 +1,5 @@
+import('/static/js/hero.js').then(function(m) { m.initHero(); });
+
 var classDescs = {
     guardian:  'RELIABLE DEFENDER. GO ENGINEERS BUILD SCALABLE SYSTEMS WITH PRECISION AND DISCIPLINE.',
     berserker: 'UNSTOPPABLE FORCE. RUST WARRIORS CONQUER MEMORY AND PERFORMANCE FEARLESSLY.',
