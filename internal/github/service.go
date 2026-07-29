@@ -47,3 +47,17 @@ func (s *Service) Sync(ctx context.Context, user *users.User) error {
 func (s *Service) GetStats(ctx context.Context, userID int64) (*Stats, error) {
 	return s.store.getStats(ctx, userID)
 }
+
+// NeedsSync reports whether user has new GitHub activity since their last sync,
+// so periodic re-sync can skip idle users instead of burning GraphQL points on
+// a full fetch. Users never synced before always need a sync.
+func (s *Service) NeedsSync(ctx context.Context, user *users.User) (bool, error) {
+	since, ok, err := s.store.getLastSyncedAt(ctx, user.ID)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return true, nil
+	}
+	return hasActivity(ctx, user.AccessToken, user.Login, since, s.logger)
+}
