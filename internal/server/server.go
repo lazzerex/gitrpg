@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -44,6 +45,7 @@ type Server struct {
 	equipment    *equipment.Service
 	leaderboards *leaderboards.Service
 	syncStart    sync.Map // userID int64 → time.Time
+	httpServer   *http.Server
 }
 
 func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, lbSvc *leaderboards.Service, userStore *users.Store) *Server {
@@ -185,8 +187,31 @@ func (s *Server) renderFragment(w http.ResponseWriter, tmplName, blockName strin
 func (s *Server) registerMiddleware() {
 	s.router.Use(middleware.RequestID)
 	s.router.Use(middleware.Recoverer)
+	s.router.Use(s.securityHeaders)
 	s.router.Use(s.requestLogger)
 	s.router.Use(s.auth.LoadUser)
+}
+
+const cspPolicy = "default-src 'self'; " +
+	"script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; " +
+	"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+	"font-src 'self' https://fonts.gstatic.com; " +
+	"img-src 'self' data: https:; " +
+	"connect-src 'self'; " +
+	"frame-ancestors 'none'"
+
+func (s *Server) securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Security-Policy", cspPolicy)
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		if s.cfg.Server.Env == "production" {
+			h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) registerRoutes() {
@@ -266,6 +291,17 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 	user, _ := r.Context().Value(users.ContextKey).(*users.User)
+
+	rlKey := fmt.Sprintf("ratelimit:sync:%d", user.ID)
+	acquired, err := s.redis.SetNX(r.Context(), rlKey, 1, 30*time.Second).Result()
+	if err != nil {
+		s.logger.Warn("sync rate limit check failed", "user_id", user.ID, "error", err)
+	} else if !acquired {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, syncCooldownHTML)
+		return
+	}
+
 	s.syncStart.Store(user.ID, time.Now())
 	s.worker.SyncUser(user)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -273,6 +309,8 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 }
 
 const syncingHTML = `<div id="sync-status" hx-get="/sync/status" hx-trigger="every 2s" hx-swap="outerHTML"><p class="blink" style="color:var(--gold);font-size:8px;letter-spacing:1px;">SYNCING...</p></div>`
+
+const syncCooldownHTML = `<div id="sync-status"><p style="color:var(--gold);font-size:8px;letter-spacing:1px;">SYNCED RECENTLY, TRY AGAIN SHORTLY.</p></div>`
 
 func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	user, _ := r.Context().Value(users.ContextKey).(*users.User)
@@ -368,8 +406,16 @@ func requestBaseURL(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
+// githubUsernameRe matches GitHub's username rules: 1-39 chars, alphanumeric
+// or single hyphens, cannot start/end with a hyphen.
+var githubUsernameRe = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$`)
+
 func (s *Server) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
+	if !githubUsernameRe.MatchString(username) {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
 	viewer, _ := r.Context().Value(users.ContextKey).(*users.User)
 
 	profileUser, err := s.users.GetByLogin(r.Context(), username)
@@ -475,6 +521,10 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request) {
 	if len(username) > 4 && username[len(username)-4:] == ".svg" {
 		username = username[:len(username)-4]
 	}
+	if !githubUsernameRe.MatchString(username) {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
 
 	cacheKey := "svg:card:" + username
 
@@ -522,16 +572,23 @@ func (s *Server) svgResponse(w http.ResponseWriter, svg string) {
 func (s *Server) Start() error {
 	addr := ":" + s.cfg.Server.Port
 	s.logger.Info("server starting", "addr", addr, "env", s.cfg.Server.Env)
-	srv := &http.Server{
+	s.httpServer = &http.Server{
 		Addr:         addr,
 		Handler:      s.router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-	return srv.ListenAndServe()
+	err := s.httpServer.ListenAndServe()
+	if err == http.ErrServerClosed {
+		return nil
+	}
+	return err
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	return nil
+	if s.httpServer == nil {
+		return nil
+	}
+	return s.httpServer.Shutdown(ctx)
 }
