@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -46,6 +47,24 @@ func (s *Service) Sync(ctx context.Context, user *users.User) error {
 // GetStats returns the most recently synced stats for a user.
 func (s *Service) GetStats(ctx context.Context, userID int64) (*Stats, error) {
 	return s.store.getStats(ctx, userID)
+}
+
+type SyncStatus struct {
+	Status      string
+	CompletedAt *time.Time
+	Error       string
+}
+
+// LatestSyncStatus returns nil if the user has never had a sync attempt.
+func (s *Service) LatestSyncStatus(ctx context.Context, userID int64) (*SyncStatus, error) {
+	status, completedAt, errMsg, ok, err := s.store.getLatestSync(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return &SyncStatus{Status: status, CompletedAt: completedAt, Error: errMsg}, nil
 }
 
 // NeedsSync reports whether user has new GitHub activity since their last sync,
