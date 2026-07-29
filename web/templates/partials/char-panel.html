@@ -3,7 +3,7 @@
 
     {{if .IsStale}}
     <div class="px-panel-red" style="padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
-        <i data-lucide="alert-triangle" style="width:14px;height:14px;stroke:var(--red);stroke-width:2;flex-shrink:0;"></i>
+        <i aria-hidden="true" data-lucide="alert-triangle" style="width:14px;height:14px;stroke:var(--red);stroke-width:2;flex-shrink:0;"></i>
         <p style="color:var(--red);font-size:8px;">DATA IS STALE (&gt;12H). SYNC TO REFRESH.</p>
     </div>
     {{end}}
@@ -70,7 +70,7 @@
             <div id="sync-status">
                 <button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML"
                         class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
-                    <i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW
+                    <i aria-hidden="true" data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW
                 </button>
             </div>
         </div>
@@ -81,13 +81,13 @@
 
     <div class="px-panel-gold" style="padding:48px 24px;text-align:center;">
         <div class="float" style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border:4px solid var(--gold);background:#000;margin-bottom:24px;">
-            <i data-lucide="sword" style="width:32px;height:32px;stroke:var(--gold);stroke-width:1.5;"></i>
+            <i aria-hidden="true" data-lucide="sword" style="width:32px;height:32px;stroke:var(--gold);stroke-width:1.5;"></i>
         </div>
         <p style="color:#fff;font-size:13px;margin-bottom:14px;text-shadow:2px 2px 0 #000;">{{.User.Login}}</p>
         <p style="color:var(--muted);font-size:9px;margin-bottom:28px;line-height:2;">YOUR ADVENTURE AWAITS. SYNC TO CREATE YOUR CHARACTER.</p>
         <button hx-post="/sync" hx-target="#char-panel" hx-swap="outerHTML"
                 class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
-            <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>BEGIN QUEST
+            <i aria-hidden="true" data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>BEGIN QUEST
         </button>
     </div>
 
@@ -95,23 +95,5 @@
 
 </div>
 
-<script>
-(function () {
-    function counter(el, target, ms) {
-        var s = performance.now();
-        function tick(now) {
-            var p = Math.min((now - s) / ms, 1);
-            el.textContent = Math.floor(p * target);
-            if (p < 1) requestAnimationFrame(tick);
-            else el.textContent = target;
-        }
-        requestAnimationFrame(tick);
-    }
-    document.querySelectorAll('[data-stat]').forEach(function(el) {
-        counter(el, parseInt(el.dataset.stat, 10), 900);
-    });
-    var bar = document.getElementById('xp-bar');
-    if (bar) { bar.style.width = '0%'; void bar.offsetWidth; requestAnimationFrame(function() { bar.style.width = bar.dataset.width + '%'; }); }
-})();
-</script>
+<script src="/static/js/char-panel.js"></script>
 {{end}}
