@@ -10,6 +10,34 @@ import (
 	"github.com/lazzerex/gitrpg/internal/users"
 )
 
+func TestGithubUsernameRe(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"simple", "octocat", true},
+		{"with hyphen", "git-rpg", true},
+		{"single char", "a", true},
+		{"digits", "12345", true},
+		{"max length 39", "a23456789012345678901234567890123456789"[:39], true},
+		{"empty", "", false},
+		{"leading hyphen", "-octocat", false},
+		{"trailing hyphen", "octocat-", false},
+		{"too long", "a2345678901234567890123456789012345678901", false},
+		{"path traversal", "../../etc/passwd", false},
+		{"sql-ish", "a' OR '1'='1", false},
+		{"dot svg leftover", "octocat.svg", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := githubUsernameRe.MatchString(c.in); got != c.want {
+				t.Errorf("githubUsernameRe.MatchString(%q) = %v, want %v", c.in, got, c.want)
+			}
+		})
+	}
+}
+
 func TestWantsLeaderboardFragment(t *testing.T) {
 	cases := []struct {
 		name       string
