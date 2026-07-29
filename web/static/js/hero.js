@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+export function initHero() {
 const portrait = document.getElementById('char-portrait');
-if (!portrait) throw new Error('no portrait');
+if (!portrait) return;
 
 const canvas  = document.getElementById('rpg-canvas');
 const loading = document.getElementById('canvas-loading');
@@ -115,3 +116,4 @@ document.addEventListener('htmx:beforeSwap', function() {
     controls.dispose();
     renderer.dispose();
 }, { once: true });
+}
