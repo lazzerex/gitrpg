@@ -2,6 +2,10 @@
 
 {{define "title"}}{{.User.Login}} — GitHub RPG{{end}}
 
+{{define "canonical_url"}}{{.BaseURL}}/profile{{end}}
+
+{{define "robots_meta"}}<meta name="robots" content="noindex">{{end}}
+
 {{define "content"}}
 <div style="max-width:700px;margin:0 auto;padding:32px 16px 64px;">
 
@@ -16,13 +20,13 @@
             {{range .Achievements}}
             {{if .Earned}}
             <div class="ach-base ach-earned {{.AchClass}} {{.RarityColor}}">
-                <i data-lucide="{{.Icon}}"></i>
+                <i aria-hidden="true" data-lucide="{{.Icon}}"></i>
                 <p style="font-size:7px;line-height:1.8;margin-bottom:4px;">{{.Name}}</p>
                 <p style="font-size:6px;color:var(--muted);line-height:1.8;">{{.Description}}</p>
             </div>
             {{else}}
             <div class="ach-base ach-locked">
-                <i data-lucide="{{.Icon}}" style="stroke:var(--border-hi);"></i>
+                <i aria-hidden="true" data-lucide="{{.Icon}}" style="stroke:var(--border-hi);"></i>
                 <p style="font-size:7px;line-height:1.8;color:var(--muted);">{{.Name}}</p>
             </div>
             {{end}}
@@ -38,13 +42,13 @@
             {{range .Equipment.Slots}}
             {{if .Item}}
             <div class="ach-base ach-earned ach-common">
-                <i data-lucide="{{.Item.Icon}}"></i>
+                <i aria-hidden="true" data-lucide="{{.Item.Icon}}"></i>
                 <p style="font-size:7px;line-height:1.8;margin-bottom:4px;">{{.Item.Name}}</p>
                 <p style="font-size:6px;color:var(--muted);line-height:1.8;">{{.Label}}</p>
             </div>
             {{else}}
             <div class="ach-base ach-locked">
-                <i data-lucide="help-circle" style="stroke:var(--border-hi);"></i>
+                <i aria-hidden="true" data-lucide="help-circle" style="stroke:var(--border-hi);"></i>
                 <p style="font-size:7px;line-height:1.8;color:var(--muted);">{{.Label}}</p>
             </div>
             {{end}}

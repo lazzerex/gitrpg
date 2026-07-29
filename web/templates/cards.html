@@ -2,12 +2,16 @@
 
 {{define "title"}}Card Generator — GitHub RPG{{end}}
 
+{{define "meta_description"}}Preview any GitHub RPG character card and grab the README embed snippet.{{end}}
+
+{{define "canonical_url"}}{{.BaseURL}}/cards{{end}}
+
 {{define "content"}}
 <div style="max-width:700px;margin:0 auto;padding:40px 16px 64px;">
 
     <div style="text-align:center;margin-bottom:40px;">
         <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border:4px solid var(--gold);background:var(--panel);box-shadow:4px 4px 0 #000;margin-bottom:20px;">
-            <i data-lucide="id-card" style="width:28px;height:28px;stroke:var(--gold);stroke-width:1.5;"></i>
+            <i aria-hidden="true" data-lucide="id-card" style="width:28px;height:28px;stroke:var(--gold);stroke-width:1.5;"></i>
         </div>
         <h1 style="color:var(--gold);font-size:18px;text-shadow:3px 3px 0 #000;margin-bottom:14px;">CARD GENERATOR</h1>
         <p style="color:var(--muted);font-size:8px;line-height:2;">PREVIEW ANY GITHUB RPG CARD &#183; COPY YOUR README SNIPPET</p>
@@ -16,11 +20,11 @@
     <div class="px-panel" style="padding:24px;margin-bottom:24px;">
         <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:16px;">[ ENTER USERNAME ]</p>
         <div style="display:flex;gap:12px;">
-            <input id="username-input" type="text" placeholder="GITHUB USERNAME"
+            <input id="username-input" type="text" placeholder="GITHUB USERNAME" aria-label="GitHub username"
                    class="px-input" autocomplete="off" spellcheck="false" style="flex:1;">
-            <button onclick="previewCard()" class="px-btn px-btn-gold"
+            <button id="preview-card-btn" class="px-btn px-btn-gold"
                     style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:6px;">
-                <i data-lucide="search" style="width:12px;height:12px;stroke:#050010;stroke-width:2;"></i>GO
+                <i aria-hidden="true" data-lucide="search" style="width:12px;height:12px;stroke:#050010;stroke-width:2;"></i>GO
             </button>
         </div>
     </div>
@@ -35,10 +39,10 @@
                 <div class="px-code" style="flex:1;">
                     <code id="snippet-full" style="font-family:'Press Start 2P',monospace;font-size:8px;word-break:break-all;"></code>
                 </div>
-                <button id="copy-full-btn" onclick="copySnippet('snippet-full', 'copy-full-btn')"
+                <button id="copy-full-btn"
                         class="px-btn px-btn-cyan"
                         style="font-size:7px;padding:8px 12px;flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
-                    <i id="copy-full-icon" data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY
+                    <i id="copy-full-icon" aria-hidden="true" data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY
                 </button>
             </div>
         </div>
@@ -46,7 +50,7 @@
         <div style="text-align:center;padding:8px;">
             <a id="profile-link" href="#" class="px-btn px-btn-cyan"
                style="font-size:8px;display:inline-flex;align-items:center;gap:8px;">
-                <i data-lucide="arrow-right" style="width:13px;height:13px;stroke:var(--cyan);stroke-width:2;"></i>VIEW FULL PROFILE
+                <i aria-hidden="true" data-lucide="arrow-right" style="width:13px;height:13px;stroke:var(--cyan);stroke-width:2;"></i>VIEW FULL PROFILE
             </a>
         </div>
 
@@ -54,35 +58,5 @@
 
 </div>
 
-<script>
-function previewCard() {
-    var username = document.getElementById('username-input').value.trim();
-    if (!username) return;
-    var origin = window.location.origin;
-    document.getElementById('card-full').src = '/card/' + username + '.svg?t=' + Date.now();
-    document.getElementById('snippet-full').textContent = '![GitHub RPG](' + origin + '/card/' + username + '.svg)';
-    document.getElementById('profile-link').href = '/u/' + username;
-    document.getElementById('preview-section').style.display = 'block';
-}
-
-function copySnippet(snippetId, btnId) {
-    var text = document.getElementById(snippetId).textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        var btn = document.getElementById(btnId);
-        btn.textContent = 'COPIED!';
-        btn.style.borderColor = 'var(--green)';
-        btn.style.color = 'var(--green)';
-        setTimeout(function() {
-            btn.innerHTML = '<i data-lucide="copy" style="width:11px;height:11px;stroke:var(--cyan);stroke-width:2;"></i>COPY';
-            btn.style.borderColor = '';
-            btn.style.color = '';
-            lucide.createIcons();
-        }, 1500);
-    });
-}
-
-document.getElementById('username-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') previewCard();
-});
-</script>
+<script src="/static/js/cards.js"></script>
 {{end}}

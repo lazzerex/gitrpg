@@ -2,12 +2,16 @@
 
 {{define "title"}}Leaderboard — GitHub RPG{{end}}
 
+{{define "meta_description"}}See who's topping the GitHub RPG XP leaderboard.{{end}}
+
+{{define "canonical_url"}}{{.BaseURL}}/leaderboard{{end}}
+
 {{define "content"}}
 <div style="max-width:700px;margin:0 auto;padding:40px 16px 64px;">
 
     <div style="text-align:center;margin-bottom:40px;">
         <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border:4px solid var(--gold);background:var(--panel);box-shadow:4px 4px 0 #000;margin-bottom:20px;">
-            <i data-lucide="trophy" style="width:28px;height:28px;stroke:var(--gold);stroke-width:1.5;"></i>
+            <i aria-hidden="true" data-lucide="trophy" style="width:28px;height:28px;stroke:var(--gold);stroke-width:1.5;"></i>
         </div>
         <h1 style="color:var(--gold);font-size:18px;text-shadow:3px 3px 0 #000;margin-bottom:14px;">LEADERBOARD</h1>
         <p style="color:var(--muted);font-size:8px;line-height:2;">TOP DEVELOPERS RANKED BY TOTAL XP</p>
@@ -31,7 +35,7 @@
                 <img src="{{.AvatarURL}}" alt="" style="width:24px;height:24px;border-radius:50%;flex-shrink:0;">
                 {{end}}
                 <span style="flex:1;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{.Login}}{{if and $.User (eq .Login $.User.Login)}} <span style="color:var(--gold);">(YOU)</span>{{end}}</span>
-                <span style="font-size:7px;color:var(--muted);flex-shrink:0;display:flex;align-items:center;gap:4px;"><i data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--muted);stroke-width:2;"></i>{{.Class}}</span>
+                <span style="font-size:7px;color:var(--muted);flex-shrink:0;display:flex;align-items:center;gap:4px;"><i aria-hidden="true" data-lucide="{{classIcon .Class}}" style="width:10px;height:10px;stroke:var(--muted);stroke-width:2;"></i>{{.Class}}</span>
                 <span style="font-size:8px;color:var(--cyan);flex-shrink:0;width:48px;text-align:right;">LV {{.Level}}</span>
                 <span style="font-size:8px;color:var(--green);flex-shrink:0;width:72px;text-align:right;">{{.TotalXP}} XP</span>
             </a>

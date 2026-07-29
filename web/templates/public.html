@@ -2,6 +2,12 @@
 
 {{define "title"}}{{.ProfileUser.Login}} — GitHub RPG{{end}}
 
+{{define "meta_description"}}{{if .Character}}{{.ProfileUser.Login}} is a Level {{.Character.Level}} {{.Character.Class}} on GitHub RPG — {{.Character.Title}}.{{else}}{{.ProfileUser.Login}}'s GitHub RPG character.{{end}}{{end}}
+
+{{define "canonical_url"}}{{.BaseURL}}/u/{{.ProfileUser.Login}}{{end}}
+
+{{define "og_image"}}{{if .Character}}{{.BaseURL}}/card/{{.ProfileUser.Login}}.svg{{else}}{{.BaseURL}}/static/assets/gitrpg-logo.png{{end}}{{end}}
+
 {{define "content"}}
 <div style="max-width:700px;margin:0 auto;padding:32px 16px 64px;">
 
@@ -66,13 +72,13 @@
             {{range .Achievements}}
             {{if .Earned}}
             <div class="ach-base ach-earned {{.AchClass}} {{.RarityColor}}">
-                <i data-lucide="{{.Icon}}"></i>
+                <i aria-hidden="true" data-lucide="{{.Icon}}"></i>
                 <p style="font-size:7px;line-height:1.8;margin-bottom:4px;">{{.Name}}</p>
                 <p style="font-size:6px;color:var(--muted);line-height:1.8;">{{.Description}}</p>
             </div>
             {{else}}
             <div class="ach-base ach-locked">
-                <i data-lucide="{{.Icon}}" style="stroke:var(--border-hi);"></i>
+                <i aria-hidden="true" data-lucide="{{.Icon}}" style="stroke:var(--border-hi);"></i>
                 <p style="font-size:7px;line-height:1.8;color:var(--muted);">{{.Name}}</p>
             </div>
             {{end}}
@@ -88,13 +94,13 @@
             {{range .Equipment.Slots}}
             {{if .Item}}
             <div class="ach-base ach-earned ach-common">
-                <i data-lucide="{{.Item.Icon}}"></i>
+                <i aria-hidden="true" data-lucide="{{.Item.Icon}}"></i>
                 <p style="font-size:7px;line-height:1.8;margin-bottom:4px;">{{.Item.Name}}</p>
                 <p style="font-size:6px;color:var(--muted);line-height:1.8;">{{.Label}}</p>
             </div>
             {{else}}
             <div class="ach-base ach-locked">
-                <i data-lucide="help-circle" style="stroke:var(--border-hi);"></i>
+                <i aria-hidden="true" data-lucide="help-circle" style="stroke:var(--border-hi);"></i>
                 <p style="font-size:7px;line-height:1.8;color:var(--muted);">{{.Label}}</p>
             </div>
             {{end}}
@@ -124,29 +130,11 @@
     <div class="px-panel" style="padding:28px;text-align:center;">
         <p style="color:var(--muted);font-size:8px;margin-bottom:20px;line-height:2;">WANT YOUR OWN RPG CHARACTER?</p>
         <a href="/auth/github" hx-boost="false" class="px-btn px-btn-gold" style="display:inline-flex;align-items:center;gap:8px;">
-            <i data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START YOUR QUEST
+            <i aria-hidden="true" data-lucide="sword" style="width:14px;height:14px;stroke:#050010;stroke-width:2;"></i>START YOUR QUEST
         </a>
     </div>
 
 </div>
 
-<script>
-(function () {
-    function counter(el, target, ms) {
-        var s = performance.now();
-        function tick(now) {
-            var p = Math.min((now - s) / ms, 1);
-            el.textContent = Math.floor(p * target);
-            if (p < 1) requestAnimationFrame(tick);
-            else el.textContent = target;
-        }
-        requestAnimationFrame(tick);
-    }
-    document.querySelectorAll('[data-stat]').forEach(function(el) {
-        counter(el, parseInt(el.dataset.stat, 10), 900);
-    });
-    var bar = document.getElementById('xp-bar');
-    if (bar) requestAnimationFrame(function() { requestAnimationFrame(function() { bar.style.width = bar.dataset.width + '%'; }); });
-})();
-</script>
+<script src="/static/js/public.js"></script>
 {{end}}
