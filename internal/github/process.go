@@ -53,7 +53,7 @@ func process(userID int64, raw *RawStats) *Stats {
 		d.IsFork = r.IsFork
 		d.StargazerCount = r.StargazerCount
 		d.ForkCount = r.ForkCount
-		d.CommitCount = r.CommitCount
+		d.CommitCount += r.CommitCount
 		merged[r.NameWithOwner] = d
 	}
 
