@@ -39,6 +39,9 @@ func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achieve
 func (w *Worker) Start(ctx context.Context) {
 	ticker := time.NewTicker(6 * time.Hour)
 	defer ticker.Stop()
+
+	w.syncAll(ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
