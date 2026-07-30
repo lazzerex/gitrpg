@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 const apiURL = "https://api.github.com/graphql"
@@ -19,7 +20,7 @@ type Client struct {
 }
 
 func newClient(token string, logger *slog.Logger) *Client {
-	return &Client{http: &http.Client{}, token: token, logger: logger}
+	return &Client{http: &http.Client{Timeout: 30 * time.Second}, token: token, logger: logger}
 }
 
 type gqlReq struct {
