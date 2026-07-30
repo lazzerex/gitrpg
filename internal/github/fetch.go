@@ -7,16 +7,24 @@ import (
 	"time"
 )
 
-// contributionsCollection covers only the most recent year.
-// TODO: loop over prior years for all-time commit accuracy.
 const statsQuery = `
 query($login: String!) {
   rateLimit { cost remaining }
   user(login: $login) {
+    createdAt
     followers    { totalCount }
     pullRequests(states: [MERGED]) { totalCount }
     issues      (states: [CLOSED]) { totalCount }
-    contributionsCollection {
+  }
+}`
+
+// contributionsQuery covers at most one year per call (GitHub's from/to limit);
+// fetch loops it across a user's full account history.
+const contributionsQuery = `
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  rateLimit { cost }
+  user(login: $login) {
+    contributionsCollection(from: $from, to: $to) {
       totalCommitContributions
       totalPullRequestReviewContributions
       contributionCalendar {
@@ -61,9 +69,18 @@ type statsResult struct {
 		Remaining int `json:"remaining"`
 	} `json:"rateLimit"`
 	User *struct {
-		Followers               struct{ TotalCount int } `json:"followers"`
-		PullRequests            struct{ TotalCount int } `json:"pullRequests"`
-		Issues                  struct{ TotalCount int } `json:"issues"`
+		CreatedAt    string                   `json:"createdAt"`
+		Followers    struct{ TotalCount int } `json:"followers"`
+		PullRequests struct{ TotalCount int } `json:"pullRequests"`
+		Issues       struct{ TotalCount int } `json:"issues"`
+	} `json:"user"`
+}
+
+type contributionsResult struct {
+	RateLimit struct {
+		Cost int `json:"cost"`
+	} `json:"rateLimit"`
+	User *struct {
 		ContributionsCollection struct {
 			TotalCommitContributions            int `json:"totalCommitContributions"`
 			TotalPullRequestReviewContributions int `json:"totalPullRequestReviewContributions"`
@@ -186,6 +203,27 @@ func hasActivity(ctx context.Context, token, login string, since time.Time, logg
 		cc.TotalIssueContributions > 0, nil
 }
 
+type window struct {
+	from, to time.Time
+}
+
+// yearWindows splits [createdAt, now] into disjoint day-aligned windows of at
+// most one year each, so boundary days are never counted twice and no window
+// exceeds GitHub's one-year contributionsCollection limit.
+func yearWindows(createdAt, now time.Time) []window {
+	var ws []window
+	from := time.Date(createdAt.Year(), createdAt.Month(), createdAt.Day(), 0, 0, 0, 0, time.UTC)
+	for from.Before(now) {
+		to := from.AddDate(1, 0, 0).Add(-time.Second)
+		if to.After(now) {
+			to = now
+		}
+		ws = append(ws, window{from: from, to: to})
+		from = to.Add(time.Second)
+	}
+	return ws
+}
+
 func fetch(ctx context.Context, token, login string, logger *slog.Logger) (*RawStats, error) {
 	c := newClient(token, logger)
 
@@ -202,30 +240,46 @@ func fetch(ctx context.Context, token, login string, logger *slog.Logger) (*RawS
 		Followers:    sr.User.Followers.TotalCount,
 		PRsMerged:    sr.User.PullRequests.TotalCount,
 		IssuesClosed: sr.User.Issues.TotalCount,
-		Commits:      sr.User.ContributionsCollection.TotalCommitContributions,
-		Reviews:      sr.User.ContributionsCollection.TotalPullRequestReviewContributions,
 		PointsUsed:   sr.RateLimit.Cost,
 	}
 
-	cc := sr.User.ContributionsCollection
-	for _, w := range cc.ContributionCalendar.Weeks {
-		for _, d := range w.ContributionDays {
-			raw.Calendar = append(raw.Calendar, CalendarDay{Date: d.Date, Count: d.ContributionCount})
-		}
+	createdAt, err := time.Parse(time.RFC3339, sr.User.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("parse user createdAt: %w", err)
 	}
 
-	for _, rc := range cc.CommitContributionsByRepository {
-		r := RawRepo{
-			NameWithOwner:  rc.Repository.NameWithOwner,
-			IsFork:         rc.Repository.IsFork,
-			StargazerCount: rc.Repository.StargazerCount,
-			ForkCount:      rc.Repository.ForkCount,
-			CommitCount:    rc.Contributions.TotalCount,
+	for _, win := range yearWindows(createdAt, time.Now().UTC()) {
+		var cr contributionsResult
+		vars := map[string]any{"login": login, "from": win.from.Format(time.RFC3339), "to": win.to.Format(time.RFC3339)}
+		if err := c.query(ctx, contributionsQuery, vars, &cr); err != nil {
+			return nil, err
 		}
-		if rc.Repository.PrimaryLanguage != nil {
-			r.Language = rc.Repository.PrimaryLanguage.Name
+		if cr.User != nil {
+			raw.PointsUsed += cr.RateLimit.Cost
+			cc := cr.User.ContributionsCollection
+			raw.Commits += cc.TotalCommitContributions
+			raw.Reviews += cc.TotalPullRequestReviewContributions
+
+			for _, w := range cc.ContributionCalendar.Weeks {
+				for _, d := range w.ContributionDays {
+					raw.Calendar = append(raw.Calendar, CalendarDay{Date: d.Date, Count: d.ContributionCount})
+				}
+			}
+
+			for _, rc := range cc.CommitContributionsByRepository {
+				r := RawRepo{
+					NameWithOwner:  rc.Repository.NameWithOwner,
+					IsFork:         rc.Repository.IsFork,
+					StargazerCount: rc.Repository.StargazerCount,
+					ForkCount:      rc.Repository.ForkCount,
+					CommitCount:    rc.Contributions.TotalCount,
+				}
+				if rc.Repository.PrimaryLanguage != nil {
+					r.Language = rc.Repository.PrimaryLanguage.Name
+				}
+				raw.RepoContribs = append(raw.RepoContribs, r)
+			}
 		}
-		raw.RepoContribs = append(raw.RepoContribs, r)
 	}
 
 	// Paginate owned repos for complete star count (up to 2000 repos).
