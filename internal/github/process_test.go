@@ -48,6 +48,27 @@ func TestProcess(t *testing.T) {
 	}
 }
 
+func TestProcess_SumsCommitCountAcrossRepeatedRepoEntries(t *testing.T) {
+	// Multi-year fetch queries produce one RepoContribs entry per repo per
+	// year window, so the same repo can appear more than once.
+	raw := &RawStats{
+		Login: "alice",
+		RepoContribs: []RawRepo{
+			{NameWithOwner: "alice/own-repo", Language: "Go", CommitCount: 3},
+			{NameWithOwner: "alice/own-repo", Language: "Go", CommitCount: 3},
+		},
+	}
+
+	s := process(1, raw)
+
+	if s.Languages["Go"] != 6 {
+		t.Errorf("Languages[Go] = %d, want 6 (summed across entries)", s.Languages["Go"])
+	}
+	if s.QualifiedRepos != 1 {
+		t.Errorf("QualifiedRepos = %d, want 1 (6 total commits meets >=5 threshold)", s.QualifiedRepos)
+	}
+}
+
 func TestCalculateStreaks_Longest(t *testing.T) {
 	days := []CalendarDay{
 		{Date: "2020-01-01", Count: 1},
