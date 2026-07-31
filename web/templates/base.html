@@ -46,9 +46,16 @@
                     <i aria-hidden="true" data-lucide="trophy" style="width:12px;height:12px;stroke:var(--muted);stroke-width:2;"></i>RANKS
                 </a>
                 {{if .User}}
+                <a href="/play" style="color: var(--muted); font-size: 8px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                    <i aria-hidden="true" data-lucide="swords" style="width:12px;height:12px;stroke:var(--muted);stroke-width:2;"></i>ARENA
+                </a>
                 <a href="/u/{{.User.Login}}" style="color: var(--muted); font-size: 8px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
                     <i aria-hidden="true" data-lucide="globe" style="width:12px;height:12px;stroke:var(--muted);stroke-width:2;"></i>PUBLIC
                 </a>
+                {{else}}
+                <span title="SIGN IN TO TRY THE ARENA" style="color: var(--muted); opacity: 0.45; font-size: 8px; cursor: not-allowed; display: flex; align-items: center; gap: 6px;">
+                    <i aria-hidden="true" data-lucide="lock" style="width:12px;height:12px;stroke:var(--muted);stroke-width:2;"></i>ARENA
+                </span>
                 {{end}}
             </div>
             <div style="display: flex; gap: 16px; align-items: center; flex-shrink: 0;">
