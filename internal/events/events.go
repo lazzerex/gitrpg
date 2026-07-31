@@ -12,6 +12,7 @@ const (
 	TypeLevelUp             = "level.up"
 	TypeAchievementUnlocked = "achievement.unlocked"
 	TypeEquipmentChanged    = "equipment.changed"
+	TypeQuestCompleted      = "quest.completed"
 )
 
 // Event is a domain event tied to a user.
