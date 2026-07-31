@@ -2,12 +2,16 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/lazzerex/gitrpg/internal/achievements"
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/equipment"
+	"github.com/lazzerex/gitrpg/internal/events"
 	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/stats"
 	"github.com/lazzerex/gitrpg/internal/users"
@@ -20,17 +24,19 @@ type Worker struct {
 	achievements *achievements.Service
 	equipment    *equipment.Service
 	userStore    *users.Store
+	bus          *events.Bus
 	logger       *slog.Logger
 }
 
 // New creates a Worker.
-func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, userStore *users.Store, logger *slog.Logger) *Worker {
+func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, userStore *users.Store, bus *events.Bus, logger *slog.Logger) *Worker {
 	return &Worker{
 		github:       githubSvc,
 		characters:   charSvc,
 		achievements: achSvc,
 		equipment:    eqSvc,
 		userStore:    userStore,
+		bus:          bus,
 		logger:       logger,
 	}
 }
@@ -97,6 +103,7 @@ func (w *Worker) syncOne(ctx context.Context, user *users.User) {
 		w.logger.Error("sync failed", "user_id", user.ID, "login", user.Login, "error", err)
 		return
 	}
+	w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeGithubSynced})
 
 	gs, err := w.github.GetStats(ctx, user.ID)
 	if err != nil {
@@ -104,18 +111,35 @@ func (w *Worker) syncOne(ctx context.Context, user *users.User) {
 		return
 	}
 
+	prev, err := w.characters.GetByUserID(ctx, user.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		w.logger.Error("previous character load failed", "user_id", user.ID, "error", err)
+	}
+
 	char := stats.Calculate(gs)
 	if err := w.characters.Upsert(ctx, char); err != nil {
 		w.logger.Error("character upsert failed", "user_id", user.ID, "error", err)
 		return
 	}
-
-	if err := w.achievements.EvaluateAndSave(ctx, user.ID, gs); err != nil {
-		w.logger.Error("achievement eval failed", "user_id", user.ID, "error", err)
+	if prev != nil && char.Level > prev.Level {
+		w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeLevelUp,
+			Payload: map[string]any{"from": prev.Level, "to": char.Level}})
 	}
 
-	if err := w.equipment.EvaluateAndSave(ctx, user.ID, gs); err != nil {
+	unlocked, err := w.achievements.EvaluateAndSave(ctx, user.ID, gs)
+	if err != nil {
+		w.logger.Error("achievement eval failed", "user_id", user.ID, "error", err)
+	}
+	for _, slug := range unlocked {
+		w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeAchievementUnlocked,
+			Payload: map[string]any{"slug": slug}})
+	}
+
+	eqChanged, err := w.equipment.EvaluateAndSave(ctx, user.ID, gs)
+	if err != nil {
 		w.logger.Error("equipment eval failed", "user_id", user.ID, "error", err)
+	} else if eqChanged {
+		w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeEquipmentChanged})
 	}
 
 	w.logger.Info("sync complete",
