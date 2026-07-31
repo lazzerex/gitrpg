@@ -44,13 +44,20 @@ You get a README card you can embed anywhere.
 
 ## Features
 
-- **XP from real activity** - commits, merged PRs, reviews, closed issues, qualified repositories
+- **XP from real activity** - commits, merged PRs, reviews, closed issues, qualified repositories - across your entire account history
 - **9 classes** - assigned by primary language (Go, Rust, TypeScript, JavaScript, Python, C#, Java, C++, plus Wanderer)
 - **Level curve** - `XP(N) = 100 × N^1.8`, farming-resistant by design
 - **5 stats** - STR, INT, WIS, DEX, CHA derived from different activity signals
 - **SVG README card** - pixel-art character card, Redis-cached, embeddable in any README
+- **Card evolution** - the card frame upgrades at levels 10, 25, and 50: bronze, silver, gold, animated gold
+- **Pixel characters** - a generated 16x16 sprite per class, shown on profiles and playable in the arena
+- **Weekly quests** - rotating GitHub-activity challenges (merge PRs, review, close issues, commit) that award bonus XP
+- **Equipment** - weapon, shield, and accessory earned from your top languages
 - **Achievements** - 9 milestone badges, evaluated on every sync
+- **Leaderboard** - global XP ranking
+- **Arena mode** - a built-in top-down minigame: pick any class, fight 5 waves and a boss with your real stats
 - **Anti-farming rules** - repos need 5 commits, 1 star, or 1 external contributor to count
+- **Efficient sync** - cheap activity checks skip idle users; full syncs cover multi-year history in windowed GraphQL queries
 
 ## Tech Stack
 
@@ -179,7 +186,16 @@ After signing in and syncing, embed your card in any GitHub README:
 ![GitRPG](https://gitrpg.onrender.com/card/YOUR_USERNAME.svg)
 ```
 
-The card updates automatically every time your character syncs.
+The card updates automatically every time your character syncs, and its frame evolves with your level: bronze below 10, silver at 10+, gold at 25+, and an animated gold frame at 50+.
+
+## Arena Mode
+
+Signed-in users can enter the arena from their profile - a zero-dependency canvas minigame where your character fights five waves of enemies plus a final boss, The Warden.
+
+- Your real stats matter: AGILITY drives movement speed, POWER drives damage, level drives HP
+- Play any of the 9 classes, each with its own attack style - blade arcs, whirlwinds, exploding orbs, knife fans, piercing lances
+- Three enemy types (chasers, shooters, teleporters), buff pickups, and a boss with charge, radial burst, and summon skills
+- Sprites are generated from text grids by `tools/gen-sprites` - the pixel art is code
 
 ## Credits
 
@@ -202,14 +218,20 @@ internal/
   characters/     character persistence
   config/         env-based config loader
   crypto/         AES-256 token encryption
+  equipment/      language-based loadout
+  events/         domain event bus and persisted event log
   github/         GitHub GraphQL sync
+  leaderboards/   global XP ranking
+  quests/         weekly quest assignment and progress
   server/         HTTP handlers and routing
   stats/          XP, level, and stat formulas
   svg/            SVG card generation
   users/          user store
   worker/         background sync worker
+tools/
+  gen-sprites/    pixel sprite generator (text grids to PNG)
 web/
-  static/         assets (sprites, icons, tiles)
+  static/         assets (sprites, icons, tiles), css, js
   templates/      Go HTML templates
 migrations/       SQL migration files (goose)
 ```
