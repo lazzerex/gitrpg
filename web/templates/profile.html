@@ -57,6 +57,27 @@
     </div>
     {{end}}
 
+    {{if .Quests}}
+    <div class="px-panel" style="padding:24px;margin-bottom:20px;">
+        <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ WEEKLY QUESTS ]</p>
+        {{range .Quests}}
+        <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;">
+                <p style="font-size:8px;color:#fff;">{{.Name}}</p>
+                {{if .Completed}}
+                <p style="font-size:7px;color:var(--gold);">DONE &middot; +{{.XP}} XP</p>
+                {{else}}
+                <p style="font-size:7px;color:var(--muted);">{{.Progress}} / {{.Target}} &middot; +{{.XP}} XP</p>
+                {{end}}
+            </div>
+            <div class="xp-track">
+                <div class="xp-fill" style="width:{{xpPercent .Progress .Target}}%;"></div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+
     <div class="px-panel" style="padding:24px;">
         <p style="color:var(--gold);font-size:7px;letter-spacing:2px;margin-bottom:20px;">[ README CARD ]</p>
         <img src="/card/{{.User.Login}}.svg?v={{.Character.UpdatedAt.Unix}}" alt="character card"
