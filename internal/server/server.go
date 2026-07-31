@@ -24,6 +24,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/equipment"
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
+	"github.com/lazzerex/gitrpg/internal/quests"
 	"github.com/lazzerex/gitrpg/internal/stats"
 	svgpkg "github.com/lazzerex/gitrpg/internal/svg"
 	"github.com/lazzerex/gitrpg/internal/users"
@@ -43,12 +44,13 @@ type Server struct {
 	characters   *characters.Service
 	achievements *achievements.Service
 	equipment    *equipment.Service
+	quests       *quests.Service
 	leaderboards *leaderboards.Service
 	syncStart    sync.Map // userID int64 → time.Time
 	httpServer   *http.Server
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, lbSvc *leaderboards.Service, userStore *users.Store) *Server {
+func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, w *worker.Worker, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, questSvc *quests.Service, lbSvc *leaderboards.Service, userStore *users.Store) *Server {
 	authHandler := auth.NewHandler(cfg, userStore, logger)
 	authHandler.SetPostLogin(w.SyncUser)
 
@@ -64,6 +66,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, rdb *redis.Client, logger *slog.L
 		characters:   charSvc,
 		achievements: achSvc,
 		equipment:    eqSvc,
+		quests:       questSvc,
 		leaderboards: lbSvc,
 	}
 	s.registerMiddleware()
@@ -286,6 +289,11 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("equipment load failed", "user_id", user.ID, "error", err)
 	}
 
+	userQuests, err := s.quests.GetForUser(r.Context(), user.ID)
+	if err != nil {
+		s.logger.Error("quests load failed", "user_id", user.ID, "error", err)
+	}
+
 	s.render(w, "profile.html", profileData{
 		User:         user,
 		Character:    char,
@@ -294,6 +302,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		BaseURL:      requestBaseURL(r),
 		Achievements: achs,
 		Equipment:    loadout,
+		Quests:       userQuests,
 	})
 }
 
@@ -418,6 +427,7 @@ type profileData struct {
 	BaseURL      string
 	Achievements []achievements.UserAchievement
 	Equipment    equipment.Loadout
+	Quests       []quests.UserQuest
 }
 
 type publicProfileData struct {
