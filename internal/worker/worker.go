@@ -72,7 +72,9 @@ func (w *Worker) syncAll(ctx context.Context) {
 			w.logger.Info("worker: skip sync, no new activity", "user_id", u.ID, "login", u.Login)
 			continue
 		}
-		w.SyncUser(u)
+		syncCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		w.syncOne(syncCtx, u)
+		cancel()
 	}
 }
 
@@ -80,43 +82,47 @@ func (w *Worker) LatestSyncStatus(ctx context.Context, userID int64) (*github.Sy
 	return w.github.LatestSyncStatus(ctx, userID)
 }
 
-// SyncUser triggers an immediate sync and character computation for the given user.
+// SyncUser triggers an immediate background sync and character computation for
+// the given user.
 func (w *Worker) SyncUser(user *users.User) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-
-		if err := w.github.Sync(ctx, user); err != nil {
-			w.logger.Error("sync failed", "user_id", user.ID, "login", user.Login, "error", err)
-			return
-		}
-
-		gs, err := w.github.GetStats(ctx, user.ID)
-		if err != nil {
-			w.logger.Error("get stats failed", "user_id", user.ID, "error", err)
-			return
-		}
-
-		char := stats.Calculate(gs)
-		if err := w.characters.Upsert(ctx, char); err != nil {
-			w.logger.Error("character upsert failed", "user_id", user.ID, "error", err)
-			return
-		}
-
-		if err := w.achievements.EvaluateAndSave(ctx, user.ID, gs); err != nil {
-			w.logger.Error("achievement eval failed", "user_id", user.ID, "error", err)
-		}
-
-		if err := w.equipment.EvaluateAndSave(ctx, user.ID, gs); err != nil {
-			w.logger.Error("equipment eval failed", "user_id", user.ID, "error", err)
-		}
-
-		w.logger.Info("sync complete",
-			"user_id", user.ID,
-			"login", user.Login,
-			"level", char.Level,
-			"xp", char.TotalXP,
-			"class", char.Class,
-		)
+		w.syncOne(ctx, user)
 	}()
+}
+
+func (w *Worker) syncOne(ctx context.Context, user *users.User) {
+	if err := w.github.Sync(ctx, user); err != nil {
+		w.logger.Error("sync failed", "user_id", user.ID, "login", user.Login, "error", err)
+		return
+	}
+
+	gs, err := w.github.GetStats(ctx, user.ID)
+	if err != nil {
+		w.logger.Error("get stats failed", "user_id", user.ID, "error", err)
+		return
+	}
+
+	char := stats.Calculate(gs)
+	if err := w.characters.Upsert(ctx, char); err != nil {
+		w.logger.Error("character upsert failed", "user_id", user.ID, "error", err)
+		return
+	}
+
+	if err := w.achievements.EvaluateAndSave(ctx, user.ID, gs); err != nil {
+		w.logger.Error("achievement eval failed", "user_id", user.ID, "error", err)
+	}
+
+	if err := w.equipment.EvaluateAndSave(ctx, user.ID, gs); err != nil {
+		w.logger.Error("equipment eval failed", "user_id", user.ID, "error", err)
+	}
+
+	w.logger.Info("sync complete",
+		"user_id", user.ID,
+		"login", user.Login,
+		"level", char.Level,
+		"xp", char.TotalXP,
+		"class", char.Class,
+	)
 }
