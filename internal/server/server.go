@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -87,9 +88,10 @@ var classIcons = map[string]string{
 }
 
 var templateFuncs = template.FuncMap{
-	"inc": func(n int) int { return n + 1 },
-	"add": func(a, b int) int { return a + b },
-	"sub": func(a, b int) int { return a - b },
+	"inc":   func(n int) int { return n + 1 },
+	"lower": strings.ToLower,
+	"add":   func(a, b int) int { return a + b },
+	"sub":   func(a, b int) int { return a - b },
 	"classIcon": func(class string) string {
 		icon, ok := classIcons[class]
 		if !ok {
@@ -137,7 +139,7 @@ var templateFuncs = template.FuncMap{
 // LoadTemplates builds a per-page template set (base.html + page) for each page
 // in dir. Each page gets its own isolated set so {{define "content"}} blocks don't collide.
 func (s *Server) LoadTemplates(dir string) error {
-	pages := []string{"index.html", "profile.html", "public.html", "cards.html", "leaderboard.html"}
+	pages := []string{"index.html", "profile.html", "public.html", "cards.html", "leaderboard.html", "game.html"}
 	base := filepath.Join(dir, "base.html")
 	partial := filepath.Join(dir, "partials", "char-panel.html")
 	s.templates = make(map[string]*template.Template, len(pages)+1)
@@ -244,6 +246,7 @@ func (s *Server) registerRoutes() {
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.auth.RequireAuth)
 		r.Get("/profile", s.handleProfile)
+		r.Get("/play", s.handlePlay)
 		r.Post("/sync", s.handleSync)
 		r.Get("/sync/status", s.handleSyncStatus)
 	})
@@ -303,6 +306,30 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		Achievements: achs,
 		Equipment:    loadout,
 		Quests:       userQuests,
+	})
+}
+
+type playData struct {
+	User        *users.User
+	Character   *stats.Character
+	AccentColor string
+	BaseURL     string
+}
+
+func (s *Server) handlePlay(w http.ResponseWriter, r *http.Request) {
+	user, _ := r.Context().Value(users.ContextKey).(*users.User)
+
+	char, err := s.characters.GetByUserID(r.Context(), user.ID)
+	if err != nil || char == nil {
+		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		return
+	}
+
+	s.render(w, "game.html", playData{
+		User:        user,
+		Character:   char,
+		AccentColor: svgpkg.ClassColor(char.Class),
+		BaseURL:     requestBaseURL(r),
 	})
 }
 
@@ -551,7 +578,11 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 
 func (s *Server) handleCardDemo(w http.ResponseWriter, r *http.Request) {
 	class := r.URL.Query().Get("class")
-	svg, err := svgpkg.Demo(class)
+	level, _ := strconv.Atoi(r.URL.Query().Get("level"))
+	if level < 0 || level > 99 {
+		level = 0
+	}
+	svg, err := svgpkg.Demo(class, level)
 	if err != nil {
 		http.Error(w, "demo generation failed", http.StatusInternalServerError)
 		return
