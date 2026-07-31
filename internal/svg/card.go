@@ -63,6 +63,26 @@ var classIconMap = map[string]string{
 	"Wanderer":   iconBow,
 }
 
+// cardStage maps level to an evolution tier per GAME_DESIGN.md:
+// visual card upgrades at levels 10, 25 and 50.
+func cardStage(level int) int {
+	switch {
+	case level >= 50:
+		return 3
+	case level >= 25:
+		return 2
+	case level >= 10:
+		return 1
+	default:
+		return 0
+	}
+}
+
+var tierLabels = [4]string{"", "VETERAN", "ELITE", "LEGENDARY"}
+
+// tierBorders is the card frame metal per stage: bronze, silver, gold, gold+shimmer.
+var tierBorders = [4]string{"#8a6a3f", "#c0c8d0", "#FFD700", "#FFD700"}
+
 type cardData struct {
 	Login             string
 	Level             int
@@ -92,6 +112,11 @@ type cardData struct {
 	StatIconWisdom    string
 	StatIconAgility   string
 	StatIconInfluence string
+	TierLabel         string
+	BorderColor       string
+	Veteran           bool
+	Elite             bool
+	Legendary         bool
 }
 
 func statBar(val, max int) int {
@@ -107,16 +132,21 @@ func statBar(val, max int) int {
 
 const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
   <rect width="700" height="280" fill="#050010"/>
-  <rect x="1" y="1" width="698" height="278" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <rect x="1" y="1" width="698" height="278" fill="none" stroke="{{.BorderColor}}" stroke-width="{{if .Legendary}}4{{else}}2{{end}}">{{if .Legendary}}<animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>{{end}}</rect>
   <rect x="5" y="5" width="690" height="270" fill="none" stroke="{{.AccentColor}}" stroke-width="1"/>
-  <line x1="5" y1="24" x2="5" y2="5" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="5" y1="5" x2="24" y2="5" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="676" y1="5" x2="695" y2="5" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="695" y1="5" x2="695" y2="24" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="5" y1="256" x2="5" y2="275" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="5" y1="275" x2="24" y2="275" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="676" y1="275" x2="695" y2="275" stroke="#FFD700" stroke-width="2.5"/>
-  <line x1="695" y1="256" x2="695" y2="275" stroke="#FFD700" stroke-width="2.5"/>
+  {{if .Elite}}<rect x="9" y="9" width="682" height="262" fill="none" stroke="{{.AccentColor}}" stroke-width="1" stroke-opacity="0.6"/>{{end}}
+  <line x1="5" y1="24" x2="5" y2="5" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="5" y1="5" x2="24" y2="5" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="676" y1="5" x2="695" y2="5" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="695" y1="5" x2="695" y2="24" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="5" y1="256" x2="5" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="5" y1="275" x2="24" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="676" y1="275" x2="695" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  <line x1="695" y1="256" x2="695" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
+  {{if .Veteran}}<rect x="10" y="10" width="5" height="5" fill="{{.AccentColor}}"/>
+  <rect x="685" y="10" width="5" height="5" fill="{{.AccentColor}}"/>
+  <rect x="10" y="265" width="5" height="5" fill="{{.AccentColor}}"/>
+  <rect x="685" y="265" width="5" height="5" fill="{{.AccentColor}}"/>{{end}}
   <image x="638" y="10" width="48" height="48" href="{{.ClassIcon}}" image-rendering="pixelated"/>
   <text x="14" y="40" font-family="Courier New,Courier,monospace" font-size="24" font-weight="bold" fill="#ffffff">{{.Login}}</text>
   <rect x="14" y="46" width="70" height="20" fill="{{.AccentColor}}"/>
@@ -124,6 +154,7 @@ const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http
   <rect x="86" y="46" width="106" height="20" fill="#180830" stroke="{{.AccentColor}}" stroke-width="1"/>
   <text x="90" y="60" font-family="Courier New,Courier,monospace" font-size="13" fill="{{.AccentColor}}">{{.Class}}</text>
   <text x="14" y="74" font-family="Courier New,Courier,monospace" font-size="9" fill="#AA88DD" font-style="italic">{{.Title}}</text>
+  {{if .TierLabel}}<text x="685" y="74" font-family="Courier New,Courier,monospace" font-size="9" font-weight="bold" fill="{{.BorderColor}}" text-anchor="end">{{.TierLabel}}</text>{{end}}
   <line x1="10" y1="80" x2="685" y2="80" stroke="#3A1A7A" stroke-width="1"/>
   <line x1="362" y1="80" x2="362" y2="256" stroke="#3A1A7A" stroke-width="1"/>
   <polygon points="362,77 365,80 362,83 359,80" fill="{{.AccentColor}}"/>
@@ -158,12 +189,15 @@ const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http
   <rect x="14" y="238" width="320" height="7" fill="#180830"/>
   <rect x="14" y="238" width="{{.XPBarWidth}}" height="7" fill="{{.AccentColor}}"/>
   <rect x="14" y="238" width="320" height="7" fill="none" stroke="#3A1A7A" stroke-width="1"/>
+  {{if .Elite}}<rect x="14" y="238" width="320" height="7" fill="none" stroke="{{.AccentColor}}" stroke-width="1" stroke-opacity="0.6"/>{{end}}
   <circle cx="530" cy="155" r="62" fill="none" stroke="#3A1A7A" stroke-width="1"/>
   <circle cx="530" cy="155" r="52" fill="none" stroke="#180830" stroke-width="14"/>
   <circle cx="530" cy="155" r="52" fill="none" stroke="{{.AccentColor}}" stroke-width="14" stroke-dasharray="{{.XPArcDash}} 327" stroke-linecap="round" transform="rotate(-90 530 155)"/>
+  {{if .Legendary}}<circle cx="530" cy="155" r="52" fill="none" stroke="#FFD700" stroke-width="14" stroke-dasharray="18 309" stroke-linecap="round" stroke-opacity="0.7" transform="rotate(-90 530 155)"><animateTransform attributeName="transform" type="rotate" from="0 530 155" to="360 530 155" dur="4s" repeatCount="indefinite" additive="sum"/></circle>{{end}}
   <text x="530" y="144" font-family="Courier New,Courier,monospace" font-size="9" fill="#AA88DD" text-anchor="middle">LVL</text>
   <text x="530" y="170" font-family="Courier New,Courier,monospace" font-size="32" font-weight="bold" fill="{{.AccentColor}}" text-anchor="middle">{{.Level}}</text>
   <text x="530" y="183" font-family="Courier New,Courier,monospace" font-size="8" fill="#AA88DD" text-anchor="middle">{{.XPPct}}%</text>
+  {{if .Elite}}<rect x="470" y="214" width="120" height="17" fill="#180830" stroke="{{.AccentColor}}" stroke-width="1" stroke-opacity="0.6"/>{{end}}
   <text x="530" y="226" font-family="Courier New,Courier,monospace" font-size="11" font-weight="bold" fill="{{.AccentColor}}" text-anchor="middle">{{.Class}}</text>
   <text x="530" y="242" font-family="Courier New,Courier,monospace" font-size="8" fill="#AA88DD" text-anchor="middle">&#8594; LV{{.NextLevel}} in {{.XPFor}} XP</text>
   <line x1="10" y1="258" x2="685" y2="258" stroke="#3A1A7A" stroke-width="1"/>
@@ -198,6 +232,7 @@ func buildData(login string, char *stats.Character) cardData {
 	if icon == "" {
 		icon = iconGem
 	}
+	stage := cardStage(char.Level)
 	return cardData{
 		Login:             html.EscapeString(login),
 		Level:             char.Level,
@@ -227,6 +262,11 @@ func buildData(login string, char *stats.Character) cardData {
 		StatIconWisdom:    statIconWisdom,
 		StatIconAgility:   statIconAgility,
 		StatIconInfluence: statIconInfluence,
+		TierLabel:         tierLabels[stage],
+		BorderColor:       tierBorders[stage],
+		Veteran:           stage >= 1,
+		Elite:             stage >= 2,
+		Legendary:         stage >= 3,
 	}
 }
 
@@ -248,14 +288,21 @@ var demoChars = map[string]*stats.Character{
 	"Sage":       {Class: "Sage", Level: 25, Title: "The Omniscient", TotalXP: 52000, XPIntoLevel: 2000, XPForLevel: 7500, Strength: 35, Intelligence: 95, Wisdom: 85, Dexterity: 45, Charisma: 60},
 	"Knight":     {Class: "Knight", Level: 22, Title: "The Valiant", TotalXP: 38500, XPIntoLevel: 500, XPForLevel: 5800, Strength: 80, Intelligence: 50, Wisdom: 65, Dexterity: 60, Charisma: 70},
 	"Battlemage": {Class: "Battlemage", Level: 17, Title: "The Spellblade", TotalXP: 19000, XPIntoLevel: 1000, XPForLevel: 3900, Strength: 65, Intelligence: 85, Wisdom: 55, Dexterity: 50, Charisma: 45},
-	"Warlord":    {Class: "Warlord", Level: 30, Title: "The Conqueror", TotalXP: 78000, XPIntoLevel: 3000, XPForLevel: 9000, Strength: 90, Intelligence: 40, Wisdom: 50, Dexterity: 70, Charisma: 75},
+	"Warlord":    {Class: "Warlord", Level: 52, Title: "The Conqueror", TotalXP: 121000, XPIntoLevel: 3000, XPForLevel: 9000, Strength: 90, Intelligence: 40, Wisdom: 50, Dexterity: 70, Charisma: 75},
 	"Wanderer":   {Class: "Wanderer", Level: 14, Title: "The Pathfinder", TotalXP: 12000, XPIntoLevel: 400, XPForLevel: 3200, Strength: 60, Intelligence: 55, Wisdom: 70, Dexterity: 85, Charisma: 50},
 }
 
-func Demo(class string) (string, error) {
+// Demo renders a sample card for a class. A level > 0 overrides the sample
+// character's level, so the evolution tiers can be previewed.
+func Demo(class string, level int) (string, error) {
 	char, ok := demoChars[class]
 	if !ok {
 		char = demoChars["Wanderer"]
+	}
+	if level > 0 {
+		c := *char
+		c.Level = level
+		char = &c
 	}
 	var buf bytes.Buffer
 	if err := cardTmpl.Execute(&buf, buildData(class, char)); err != nil {
