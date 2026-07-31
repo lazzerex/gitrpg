@@ -13,6 +13,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/equipment"
 	"github.com/lazzerex/gitrpg/internal/events"
 	"github.com/lazzerex/gitrpg/internal/github"
+	"github.com/lazzerex/gitrpg/internal/quests"
 	"github.com/lazzerex/gitrpg/internal/stats"
 	"github.com/lazzerex/gitrpg/internal/users"
 )
@@ -23,18 +24,20 @@ type Worker struct {
 	characters   *characters.Service
 	achievements *achievements.Service
 	equipment    *equipment.Service
+	quests       *quests.Service
 	userStore    *users.Store
 	bus          *events.Bus
 	logger       *slog.Logger
 }
 
 // New creates a Worker.
-func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, userStore *users.Store, bus *events.Bus, logger *slog.Logger) *Worker {
+func New(githubSvc *github.Service, charSvc *characters.Service, achSvc *achievements.Service, eqSvc *equipment.Service, questSvc *quests.Service, userStore *users.Store, bus *events.Bus, logger *slog.Logger) *Worker {
 	return &Worker{
 		github:       githubSvc,
 		characters:   charSvc,
 		achievements: achSvc,
 		equipment:    eqSvc,
+		quests:       questSvc,
 		userStore:    userStore,
 		bus:          bus,
 		logger:       logger,
@@ -111,12 +114,26 @@ func (w *Worker) syncOne(ctx context.Context, user *users.User) {
 		return
 	}
 
+	completed, err := w.quests.EvaluateAndSave(ctx, user.ID, gs)
+	if err != nil {
+		w.logger.Error("quest eval failed", "user_id", user.ID, "error", err)
+	}
+	for _, q := range completed {
+		w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeQuestCompleted,
+			Payload: map[string]any{"slug": q.Slug, "xp": q.XP}})
+	}
+
+	bonusXP, err := w.quests.TotalBonusXP(ctx, user.ID)
+	if err != nil {
+		w.logger.Error("quest bonus xp load failed", "user_id", user.ID, "error", err)
+	}
+
 	prev, err := w.characters.GetByUserID(ctx, user.ID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		w.logger.Error("previous character load failed", "user_id", user.ID, "error", err)
 	}
 
-	char := stats.Calculate(gs)
+	char := stats.Calculate(gs, bonusXP)
 	if err := w.characters.Upsert(ctx, char); err != nil {
 		w.logger.Error("character upsert failed", "user_id", user.ID, "error", err)
 		return
