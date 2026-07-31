@@ -1,0 +1,69 @@
+{{template "base.html" .}}
+
+{{define "title"}}Arena — GitHub RPG{{end}}
+
+{{define "robots_meta"}}<meta name="robots" content="noindex">{{end}}
+
+{{define "content"}}
+<div style="max-width:700px;margin:0 auto;padding:32px 16px 64px;">
+
+    <div style="text-align:center;margin-bottom:24px;">
+        <h1 style="color:var(--gold);font-size:16px;text-shadow:3px 3px 0 #000;margin-bottom:12px;">THE ARENA</h1>
+        <p style="color:var(--muted);font-size:8px;line-height:2;">
+            LVL {{.Character.Level}} {{.Character.Class}} &#183; SURVIVE THE WAVES
+        </p>
+    </div>
+
+    <div class="px-panel-gold" style="padding:16px;margin-bottom:16px;">
+        <div style="position:relative;">
+            <canvas id="game-canvas" width="480" height="360"
+                    data-str="{{.Character.Strength}}"
+                    data-dex="{{.Character.Dexterity}}"
+                    data-level="{{.Character.Level}}"
+                    data-accent="{{.AccentColor}}"
+                    data-classname="{{lower .Character.Class}}"
+                    data-sprite="/static/assets/sprites/{{lower .Character.Class}}.png"
+                    style="width:100%;display:block;image-rendering:pixelated;background:#050010;cursor:crosshair;"></canvas>
+            <button id="pause-btn" aria-label="Pause"
+                    style="display:none;position:absolute;top:8px;right:8px;border:3px solid var(--border);background:rgba(5,0,16,0.7);color:var(--muted);font-family:inherit;font-size:8px;padding:6px 10px;cursor:pointer;">II</button>
+            <div id="arena-menu" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(5,0,16,0.95);overflow-y:auto;padding:16px;">
+                <p style="color:var(--gold);font-size:16px;text-shadow:3px 3px 0 #000;">ARENA MODE</p>
+                <p style="color:var(--muted);font-size:7px;letter-spacing:1px;">CHOOSE YOUR CHAMPION</p>
+                <div style="display:flex;align-items:center;gap:24px;">
+                    <button id="prev-class" class="px-btn" style="font-size:12px;padding:10px 14px;">&#8249;</button>
+                    <img id="class-preview" alt="selected class" style="width:72px;height:72px;image-rendering:pixelated;">
+                    <button id="next-class" class="px-btn" style="font-size:12px;padding:10px 14px;">&#8250;</button>
+                </div>
+                <p id="class-name" style="color:var(--gold);font-size:10px;letter-spacing:1px;"></p>
+                <p id="weapon-label" style="color:#fff;font-size:8px;min-height:12px;"></p>
+                <div style="display:flex;gap:12px;">
+                    <button id="start-btn" class="px-btn px-btn-gold" style="font-size:8px;padding:10px 16px;">START</button>
+                    <button id="instructions-btn" class="px-btn px-btn-cyan" style="font-size:8px;padding:10px 16px;">INSTRUCTIONS</button>
+                </div>
+                <div id="arena-instructions" style="display:none;max-width:420px;">
+                    <p style="color:var(--muted);font-size:7px;line-height:2.2;text-align:center;">
+                        MOVE &#8212; WASD / ARROWS &#183; AIM &#8212; MOUSE &#183; ATTACK &#8212; LEFT CLICK &#183; ESC &#8212; PAUSE &#183; R &#8212; RESTART<br>
+                        SURVIVE 5 WAVES. SLIMES CHASE &#183; IMPS SHOOT &#183; WRAITHS TELEPORT.<br>
+                        WAVE 5: THE WARDEN &#8212; CHARGES, FIRES RADIAL BURSTS, SUMMONS SLIMES.<br>
+                        PICKUPS: HEART &#8212; HEAL 25 &#183; STAR &#8212; 2X DAMAGE &#183; BOLT &#8212; RAPID ATTACK + SPEED<br>
+                        EACH CLASS ATTACKS DIFFERENTLY &#8212; BLADES CLEAVE, ORBS EXPLODE, LANCES PIERCE.<br>
+                        AGILITY DRIVES SPEED &#183; POWER DRIVES DAMAGE &#183; LEVEL DRIVES HP
+                    </p>
+                </div>
+            </div>
+            <div id="game-overlay" style="display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(5,0,16,0.85);">
+                <p id="overlay-title" style="color:var(--gold);font-size:16px;text-shadow:3px 3px 0 #000;"></p>
+                <p id="overlay-sub" style="color:var(--muted);font-size:8px;"></p>
+                <div style="display:flex;gap:12px;">
+                    <button id="retry-btn" class="px-btn px-btn-gold" style="font-size:8px;padding:10px 16px;">TRY AGAIN</button>
+                    <button id="menu-btn" class="px-btn" style="font-size:8px;padding:10px 16px;">MENU</button>
+                    <a href="/profile" class="px-btn px-btn-cyan" style="font-size:8px;padding:10px 16px;">EXIT ARENA</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/js/game.js"></script>
+{{end}}
