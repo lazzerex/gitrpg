@@ -434,7 +434,7 @@ func writePNG(path string, img image.Image) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := png.Encode(f, img); err != nil {
 		log.Fatal(err)
 	}
