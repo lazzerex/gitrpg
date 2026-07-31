@@ -16,6 +16,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/equipment"
+	"github.com/lazzerex/gitrpg/internal/events"
 	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
 	"github.com/lazzerex/gitrpg/internal/server"
@@ -75,7 +76,8 @@ func main() {
 	achSvc := achievements.NewService(db, logger)
 	eqSvc := equipment.NewService(db, logger)
 	lbSvc := leaderboards.NewService(db, logger)
-	w := worker.New(githubSvc, charSvc, achSvc, eqSvc, userStore, logger)
+	bus := events.NewBus(db, logger)
+	w := worker.New(githubSvc, charSvc, achSvc, eqSvc, userStore, bus, logger)
 
 	srv := server.New(cfg, db, rdb, logger, w, charSvc, achSvc, eqSvc, lbSvc, userStore)
 
