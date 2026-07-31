@@ -25,6 +25,8 @@
                 </p>
                 <p style="color:var(--muted);font-size:8px;line-height:1.6;">{{.Character.Title}}</p>
             </div>
+            <img src="/static/assets/sprites/{{lower .Character.Class}}.png" alt="{{.Character.Class}} pixel character"
+                 style="width:80px;height:80px;image-rendering:pixelated;flex-shrink:0;align-self:center;">
         </div>
 
         <div style="margin-bottom:28px;">
@@ -67,6 +69,9 @@
 
         <div style="display:flex;align-items:center;justify-content:space-between;border-top:4px solid var(--border);padding-top:16px;gap:12px;flex-wrap:wrap;">
             <p style="color:var(--muted);font-size:7px;">LAST SYNC: {{fmtAge .Character.UpdatedAt}}</p>
+            <a href="/play" class="px-btn px-btn-cyan" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+                <i aria-hidden="true" data-lucide="swords" style="width:12px;height:12px;stroke:var(--cyan);stroke-width:2;"></i>ENTER ARENA
+            </a>
             <div id="sync-status">
                 <button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML"
                         class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
