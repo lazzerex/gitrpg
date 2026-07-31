@@ -24,7 +24,7 @@ func TestCard_EscapesLogin(t *testing.T) {
 
 func TestDemo_EscapesClassParam(t *testing.T) {
 	malicious := `<script>alert(1)</script>`
-	svg, err := Demo(malicious)
+	svg, err := Demo(malicious, 0)
 	if err != nil {
 		t.Fatalf("Demo() error: %v", err)
 	}

@@ -55,6 +55,7 @@ func TestPageTemplates_ExecuteWithoutError(t *testing.T) {
 		{"public profile, unsynced", "public.html", publicProfileData{ProfileUser: user, BaseURL: "https://example.com"}},
 		{"cards", "cards.html", baseData{BaseURL: "https://example.com"}},
 		{"leaderboard", "leaderboard.html", leaderboardData{BaseURL: "https://example.com"}},
+		{"game", "game.html", playData{User: user, Character: char, AccentColor: "#00add8", BaseURL: "https://example.com"}},
 	}
 
 	for _, c := range cases {
