@@ -2,6 +2,7 @@ function previewCard() {
     var username = document.getElementById('username-input').value.trim();
     if (!username) return;
     var origin = window.location.origin;
+    document.getElementById('card-error').style.display = 'none';
     document.getElementById('card-full').src = '/card/' + username + '.svg?t=' + Date.now();
     document.getElementById('snippet-full').textContent = '![GitHub RPG](' + origin + '/card/' + username + '.svg)';
     document.getElementById('profile-link').href = '/u/' + username;
@@ -31,4 +32,13 @@ document.getElementById('copy-full-btn').addEventListener('click', function() {
 
 document.getElementById('username-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') previewCard();
+});
+
+var cardImg = document.getElementById('card-full');
+cardImg.addEventListener('error', function() {
+    document.getElementById('preview-section').style.display = 'none';
+    document.getElementById('card-error').style.display = 'flex';
+});
+cardImg.addEventListener('load', function() {
+    document.getElementById('card-error').style.display = 'none';
 });
