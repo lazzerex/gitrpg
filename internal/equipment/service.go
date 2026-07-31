@@ -18,14 +18,25 @@ func NewService(db *pgxpool.Pool, logger *slog.Logger) *Service {
 	return &Service{store: newStore(db), logger: logger}
 }
 
-func (s *Service) EvaluateAndSave(ctx context.Context, userID int64, gs *github.Stats) error {
+// EvaluateAndSave recomputes the loadout and reports whether it changed.
+func (s *Service) EvaluateAndSave(ctx context.Context, userID int64, gs *github.Stats) (bool, error) {
 	loadout := Evaluate(gs)
+	prev, err := s.store.getByUserID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
 	if err := s.store.upsert(ctx, userID, loadout); err != nil {
-		return err
+		return false, err
 	}
 	s.logger.Debug("equipment evaluated", "user_id", userID,
 		"weapon", slugOf(loadout.Weapon), "shield", slugOf(loadout.Shield), "accessory", slugOf(loadout.Accessory))
-	return nil
+	return !sameLoadout(loadout, prev), nil
+}
+
+func sameLoadout(a, b Loadout) bool {
+	return slugOf(a.Weapon) == slugOf(b.Weapon) &&
+		slugOf(a.Shield) == slugOf(b.Shield) &&
+		slugOf(a.Accessory) == slugOf(b.Accessory)
 }
 
 // Unsynced users get a zero-value Loadout, not an error.
