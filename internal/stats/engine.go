@@ -24,9 +24,10 @@ type Character struct {
 	UpdatedAt    time.Time
 }
 
-// Calculate derives a Character from synced GitHub stats.
-func Calculate(s *github.Stats) *Character {
-	xp := calcXP(s)
+// Calculate derives a Character from synced GitHub stats plus flat bonus XP
+// earned outside the stat formula (completed quests).
+func Calculate(s *github.Stats, bonusXP int) *Character {
+	xp := calcXP(s) + bonusXP
 	level, xpInto, xpFor := calcLevel(xp)
 	return &Character{
 		UserID:       s.UserID,
