@@ -628,7 +628,12 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svgStr, err := svgpkg.Card(user.Login, char, "")
+	loadout, err := s.equipment.GetForUser(r.Context(), user.ID)
+	if err != nil {
+		s.logger.Warn("equipment load failed for card", "user", username, "error", err)
+	}
+
+	svgStr, err := svgpkg.Card(user.Login, char, loadout)
 	if err != nil {
 		s.logger.Error("svg generation failed", "user", username, "error", err)
 		http.Error(w, "svg generation failed", http.StatusInternalServerError)
@@ -644,7 +649,9 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) svgResponse(w http.ResponseWriter, svg string) {
 	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	if w.Header().Get("Cache-Control") == "" {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+	}
 	_, _ = fmt.Fprint(w, svg)
 }
 
