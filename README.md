@@ -2,15 +2,20 @@
 
 # GitRPG
 
-<img width="469" height="155" alt="gitrpg-logo" src="https://github.com/user-attachments/assets/9401cf11-6203-49bd-82f0-bf8e005a9cbe" />
+<img width="1280" height="720" alt="Image" src="https://github.com/user-attachments/assets/6730a589-b8d5-4a14-8fdd-6ca4dc511acc" />
+
+
+
+<br>
+<br>
 
 **Transform your GitHub activity into an RPG character.**
 
 Commits earn XP. Repositories unlock classes. Every push levels you up.
 
-> Still in active development. Expect breaking changes.
 
-<br>
+
+
 
 <a href="https://github.com/lazzerex/gitrpg/stargazers"><img src="https://img.shields.io/github/stars/lazzerex/gitrpg?style=flat&color=FFD700&label=Stars"/></a>
 <img src="https://img.shields.io/badge/License-MIT-6633CC?style=flat"/>
@@ -32,9 +37,12 @@ Commits earn XP. Repositories unlock classes. Every push levels you up.
 
 <br>
 
-<img width="1339" height="862" alt="image" src="https://github.com/user-attachments/assets/3a77861c-d3b3-491a-8fec-34ca62563050" />
 
 ## What is this
+
+<img width="1339" height="862" alt="image" src="https://github.com/user-attachments/assets/3a77861c-d3b3-491a-8fec-34ca62563050" />
+
+<br>
 
 GitRPG reads your public GitHub activity and assigns you a character. Your primary language determines your class. Your commits, pull requests, reviews, and stars determine your level. Everything updates automatically every 6 hours.
 
