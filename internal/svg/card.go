@@ -83,13 +83,10 @@ var gearIcons = map[string]string{
 
 // Assets loaded from disk at startup: class sprites and the pixel font.
 // Cards render without them (no sprite, fallback font) if loading fails.
-var (
-	spriteB64 = map[string]string{}
-	fontB64   string
-)
+var spriteB64 = map[string]string{}
 
-// LoadAssets reads class sprites and the embedded card font from the static
-// assets directory. Call once at startup, before serving cards.
+// LoadAssets reads class sprites and the card font from the static assets
+// directory. Call once at startup, before serving cards.
 func LoadAssets(assetsDir string) error {
 	var firstErr error
 	for class := range classColors {
@@ -103,13 +100,8 @@ func LoadAssets(assetsDir string) error {
 		}
 		spriteB64[class] = base64.StdEncoding.EncodeToString(data)
 	}
-	data, err := os.ReadFile(filepath.Join(assetsDir, "fonts", "PressStart2P-latin.woff2"))
-	if err != nil {
-		if firstErr == nil {
-			firstErr = err
-		}
-	} else {
-		fontB64 = base64.StdEncoding.EncodeToString(data)
+	if err := loadGlyphs(filepath.Join(assetsDir, "fonts", "PressStart2P-Regular.ttf")); err != nil && firstErr == nil {
+		firstErr = err
 	}
 	return firstErr
 }
@@ -139,18 +131,14 @@ func rct(b *strings.Builder, x, y, w, h int, fill string) {
 }
 
 func txt(b *strings.Builder, x, y, size int, fill, anchor, s string) {
+	if glyphs != nil {
+		textPath(b, float64(x), float64(y), float64(size), fill, anchor, s)
+		return
+	}
 	if anchor != "" {
 		anchor = fmt.Sprintf(` text-anchor="%s"`, anchor)
 	}
-	fmt.Fprintf(b, `<text x="%d" y="%d" font-size="%d" fill="%s"%s>%s</text>`, x, y, size, fill, anchor, s)
-}
-
-func writeStyle(b *strings.Builder) {
-	b.WriteString("<style>")
-	if fontB64 != "" {
-		fmt.Fprintf(b, "@font-face{font-family:'Press Start 2P';src:url(data:font/woff2;base64,%s) format('woff2');}", fontB64)
-	}
-	b.WriteString("text{font-family:'Press Start 2P',monospace;}</style>")
+	fmt.Fprintf(b, `<text x="%d" y="%d" font-size="%d" fill="%s" font-family="monospace"%s>%s</text>`, x, y, size, fill, anchor, html.EscapeString(s))
 }
 
 func writeStarfield(b *strings.Builder) {
@@ -323,7 +311,6 @@ func render(login string, char *stats.Character, loadout equipment.Loadout) stri
 
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg width="840" height="370" viewBox="0 0 %d %d" xmlns="http://www.w3.org/2000/svg">`, cardW, cardH)
-	writeStyle(&b)
 	rct(&b, 0, 0, cardW, cardH, colBG)
 	writeStarfield(&b)
 	frameColor := colBone
@@ -348,7 +335,7 @@ func render(login string, char *stats.Character, loadout equipment.Loadout) stri
 	fmt.Fprintf(&b, `<rect x="%d" y="30" width="102" height="22" fill="none" stroke="%s" stroke-width="1"/>`, rx+124, accent)
 	txt(&b, rx+175, 45, 8, accent, "middle", strings.ToUpper(char.Class))
 	if stage >= 1 {
-		txt(&b, cardW-28, 45, 9, tierColor, "end", "&#9733; "+tierLabels[stage])
+		txt(&b, cardW-28, 45, 9, tierColor, "end", "* "+tierLabels[stage])
 	}
 	txt(&b, rx, 70, 7, colMuted, "", strings.ToUpper(char.Title))
 	rct(&b, rx, 82, cardW-28-rx, 2, colDivider)
@@ -403,7 +390,7 @@ func render(login string, char *stats.Character, loadout equipment.Loadout) stri
 
 // Card renders the RPG character card as an SVG string.
 func Card(login string, char *stats.Character, loadout equipment.Loadout) (string, error) {
-	return render(html.EscapeString(login), char, loadout), nil
+	return render(login, char, loadout), nil
 }
 
 var demoChars = map[string]*stats.Character{
