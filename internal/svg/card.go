@@ -1,10 +1,14 @@
 package svg
 
 import (
-	"bytes"
+	"encoding/base64"
+	"fmt"
 	"html"
-	"text/template"
+	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/lazzerex/gitrpg/internal/equipment"
 	"github.com/lazzerex/gitrpg/internal/stats"
 )
 
@@ -27,40 +31,87 @@ var classColors = map[string]string{
 	"Wanderer":   "#6e7681",
 }
 
-// 32×32 pixel art class icons (base64 PNG).
+// Card palette: muted night slate with a single class accent.
 const (
-	iconSword     = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABLklEQVRYR9WWMQ6CMBSGYdRbOABx4gxM3oTdWTa5gd6EhOhE4uLMiCwOnMJF428e4ZFSQCmtLH/6StLv/f1bsC3Lelrix+6oT1p+L2IGQFEUrDPP82is1InaAe0ASZIwB1zXxVi1E7UDOgGoc4QxjmOMfd+HqnaiGTDtAFqcEB2xWZ2QnfFZQIwGmCUTQ65ZpVsxBOBbJ9ofOeFafwUgdSLPc8xHUQQNwxCaZRm0LEvh13WMA8YACEEWmx3qx9MNur5uWedTOmAMAANZ7T9/VI/LAbq8n6V7LwwEFUcqjpsOACxMaa+qqt0x60NZBrQDOI4j7JTqQRBgnhxK05Rt/zf3AAufTgAG0rCBmkJGCJCUskD6iwPGAPSdWuYEvTylA8YDdG0V6lNkoM8BKcAL+MPCG+UmDIIAAAAASUVORK5CYIIA"
-	iconSword2    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABUklEQVRYR82WO26DQBCGQ5sz0LgAlIpbuOAguE5PZ05BR02PlN5SmjSULFKUgjqda1v5pVE8y7I2j/VAM+yygm++2Qfey/91ubn/u/W0tpPm7Ue2AdC2LTKNoogydmpiYGAzAJS+axOjBsQBlFJgCMPQ6ZwYNbAZACqFKxN3DYgBVFWFb8dxzHbAtU2MGpAAoEyxJdOG5BrEtM2KA6xlQj/cjGeL7aBZamIxwCQTTdNgfJZliGmastVTFMVkA5sBeAiEDJRlifFBECB2Xcei/qc15WfDOieeAcBM5HnOavy1O6DdfP8ivn2+I9Z1bay9tZO9ediACUkAZoJq7e2P6D+rE+Lrz4e19ksMiAOgBLTO+75nRaJZT51kaGwuTFkFLHNxAMqMqPTMkyTBI9/3EcmUbmK2AXEAw1LVk8FcsYBi/GwDkgB39qnBY+uxPMfAqgBX+oXuIQYvYaIAAAAASUVORK5CYIIA"
-	iconSpellbook = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABN0lEQVRYR2NkIABYWFj+E1JDjPyfP38YsanDKoiscMAcALPYzc0N7B4ZGRliPIqh5smTJ2CxXbt2gWn0kMAZAgPmAJjFioqKYBc7OjqC6f3795MVAjD98+bNIy4EBr0DtBuOgX1ytcEKTBPiUz0ECFmILk91B6AnBHQL0eWHnwNgPob51FZNBMycsuMWiudZFvmg5CKq5YIBdwB6HP+J2wIWgvmY7mmA7g5At5AQn+q5gJCF6PJUdwCjWzM4mv/vqgXThPijDhh+IUBqo4DqIUB3B6iqqoLtpFubEL1FNGAOgLWGy8y/gENAQV2Z1NAHq3etPQKm79+/T1qbcNA4YFqcONjlghIqZIVA6bKHYH0ktwdgITBgDkDvF5DlfQYGBpJ7Rrj6BXRzAMwianVKYeaR3DumlwMAH1WIMKq8RIAAAAAASUVORK5CYIIA"
-	iconStaff     = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA9ElEQVRYR2NkYGD4z4AfMBKQp0gaZPjgcEDvaYg7puy4BaZ/HZoMpp/ungLzIU1CAh4CA+4AxeabKHFJ9xAYcAdIu+aghIDE9Xtg/rufj8D0/ddXaJIW4GlgIB0A8xlKdlQU1QGLuwZageknT56A6W3btlE1JJCz1oA7AL1EAztIVVUVLO7o6EiTkMBXuAy4A1DSBq1CgpjilaYhQYwDaBoSQ8oBNAkJUkJg0DiAqg4hJwQGjQOo4hBKQmDQOIAih1AjBAaNA8hyCDVDYNA4gCSH0CIEBo0D8Dpk1qxZYHlahsCgcQDWVjdVm9borVkcfKy9cADoJMwbtiyB5QAAAABJRU5ErkJgggAA"
-	iconBow       = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABOUlEQVRYR2NkwA3+o0kx4lFLthQ+QwfMAWCLZ6c7gX2VOnMfzHd0C4EBcwCKxRuPXwf7fMul5+jxS9WQQDZscDig0E0d7OP+XTdRfK4dygvmX139appAiMEBqMDYI4ER5F3jww4BLaWPKFKSBATAoPGATAfg0Oi9LoOmN+teYWikCAlBAaNA6jqEHJCgLYOgNUBWEpCXCUgRWmClJKQvg64dv8peolIqA4gKyRwhsBAOAAlccGK5NsvPqHXikSFBLElJjbDwEE5kA6gakgQqkUJtgkpDQlKHEBsSBCqC9AbtyjtDEIJCqSYUJqguQNQQgJWUsKyKZZcgt6GBPNhUQmThLW4iAmBQeMAFIf46Eli9SkhQaRWNtjzpITAoHEAikMI+RiLPIqnyQmBQeMAMjyPqYWSEKCKAwB3aeIdjAqGWAAAAABJRU5ErkJgggAA"
-	iconKey       = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7klEQVRYR+2WwQ3DIAxFyTIwDWuwDQuwBtPAMq2E5IMtN8VAMVKTC5IFyfPnx/Zlxp/Xh6OX5JWizeTFagDtw6UUNlHnHMS7kuvaxGWuAYAyr7U2Lu99W3POiBPixpjbJCUKnAXA3HUDBCV+roAaAGQIa0oJeYDGl3tAEwBcju7aWtviMca2giLfMhcVC64OgBIaAEiJEMJQ5jMKnAUg/e9pA5FUQnp2qPA8ACsUQIOIhgfOAICBhM4FvRVwpg7czgU7ANie0Nv/V5hQDYAdw3f2gjMAqPvhPnZ4gHX/dgDq4r/yANuOaXB7IZoFeAN+/6whBbi1kAAAAABJRU5ErkJgggAA"
-	iconGem       = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABRklEQVRYR9WXMQrCUAxAFXXp4iAIXXX2AN5AwSN08wJOHsJDuLSewd3FzcXZVa1bh0qhiELsB/tNfxIHoy6B337z8pL+0npN+VdXzl/7W4B7hTlxQeINRWI1AEh87PWAwz8cIC59H+L0fDZi2IWxb3ytXAOgVHl3OASeRhRBPPX7ENfXq9gE14AaAJrYNNo2YNYlJigDagDOxJQBiYkqA2oAvMSj0bPIIIBwK+Jlu0UPSNdM2AZ+A+AehryXpGWA2tRcrd5OStSAOsCs0wHSQauFFjX2vNK66fE+z9H7N1kG67s05RnQBDCEMIxckEWSiCt/U2H9gzoAy4SZBduAq+e2Kta7oKoV3wBwmrABJJVTM2CbQmfimwCoiXm7DeuTOK58zqnTkZoBpwkNgJIJpDppQR9/Gal9F1AtFV8XKxNnIDaoAzwAtSfaIXzqsLAAAAAASUVORK5CYIIA"
-	iconPotion    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABIElEQVRYR2NkIB78J14pWCUjMeqJUgQ1aHA4wEdPEuwef0tNFA9uPH4dzN9y6TlMnCjPEaUIOQQGwgEoQU+CA4gKCWJCYHA4YOVWiDu4/m0B0z4+PihpYMsWiPg3Joh4uDfcb3g9SXQIDBoHHD75CuxDW3MxlBBAF6dZCAyYA2DehUVFmBdqObdqG4SP5HPa5IKBcADMJ+BsQIIDiEngxFUYyCXhoHHAx6VXUBIBf7QOSfmfqASCmswYUKJgwB1wtfYwivu0m23pGwKjDhg0IXCTcTs47oOa2gYmDQyYA9bVVaHkArqHwKgDBl0IiHoXgNPElCZxkop5oqpMbLUhegjQzQE5dS/R6ihULs1DYCAdgNIywhMMpEQrSS0imjgAAPoJziGHZTDaAAAAAElFTkSuQmCC"
-	iconShield    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABmElEQVRYR2NkGGDASKL9/4lUT7S5RCuEWkx3B6BY2Hsau/2Hb71BCZgN0aLoAYXTo4RCYMAcALYY5mOYD03uzwT77NGjR1iTgpycHFj8jGI6rhDB8DCuEBgwB4AtDlj6GuwDWzURMD0jSg1Mq6qqovhMRkYGzH/y5AmK+O3bt8F87YZjBEMCPQQGlwOuNlih+IDUEIBphoUEUu6AexxvCNDTAeCgV8teAXZ0nOQdMH3sGGocwuI2Pj4eJTfAUv/ChQuxphUrK0hILnquAqZvTY2ABQ4jLAQGlwMcfu/DmrphPoH5FBa3sKiChQx6yMFyywFWJ+JCYNA4ACULIHFe2beilBMzF6wE82EOx6WP5BAYcAegl3DoaYDRrRnsxv+7asE03dMAzRwA8xF6yUe3cmAgHABLbygFEswhMEly6wJYVCGXgPCiEC2lDy4HwIMFmspJDQGYz2HmkBwCA+EArGkBJgirJQm1CWG1Hj6f40oDg8YBKA6BcWDtBVxFNBYfE/IoA0n9goFwALpn6d41G3QOIBT9JMsDANCtYDCjzkYBAAAAAElFTkSuQmCC"
-	iconScroll    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB30lEQVRYR2NkwA3+45BixKOHZCl8hg2YA8AWP1iRiNU3ChHzYeJUCQlshgyYA1As/vrmA9in3CICYBrGh3lfO2c9VUICOQQGlwNg3sMVEjQPAXo6ABz0BxrtwHYqqCujxDl6GoDxe5adBaubsukSRWkBlAYGhwNg+f7BzbtgH4kKC4Pp12/fooQMzOfr7z1EKSeeXvlIVkjAQ2DAHfDxQCvYB+cP7sRaAq45CykXYD43SOAF8x+chPsczL+6+jNJIQEPgYF0AMzF4MSI7hBiff7hOhNZaQKjJBxIB2ANCa2cLrA4rjiH+TxQSR4lBEKMIXWIQ/0hvGkCZ20IC4mBcABKSHj3yGBN7eg+L4kyBqsTlFBByU2wkhWpHYESIgRbRAPuAGkdfrCLBTT/gWl0n8PiGuZTmPdgIQHjv39xBxKS0JIWljYIhsBAOABcHqAHPXo+XxqqD/YRrM6A1ZIwH8JCBFZ3wNIIMSEwOBygHQop62EAVsbDouRoTRCKPC6fwxThKhdwlgODxgFYajeUOgMlGBgYGCbPXAEWstEQBNOwtIAe9wwMDGDPEwyBwegAlJISxmmJ1EXxOXrI4KoTyAkBmjsA3QJi+4C4OrMoZT96yBAsCXGkE3RzQHyyHAAA1U1oLEglgK4AAAAASUVORK5CYIIA"
-	iconHelmet    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAErSURBVFhH7ZTRDcIwDES7BAPwwx9TsAB7MAbfjIHELkzADAwB2NKTnGuiEKCkSJx0H7HP51ObdvjjBdwqnBy5pZEfR7IAHM4pgeoffBuJIfhGADdY7i/O1e7k3B6vTg1AHR1z+JhhK7oF8AEMIYawtY+vLahhHgGAGumrqNUBvraghm4BXMCl4qzEOF5AI/XcjBFdqI1QEiacPIAaLdabhNTj8mhc0mcCjpAVlgwnC8BnpMbKuPwZHb6hN4I3ZhMAYsAj1HOpzln92GMLFfMIwOXRQYy1rizp9FLaQkX3AMAF/FoxwJg6OtVrgIy+isSwWwB9FRhrH1LXANp/sAoXMtg9AI8QQ/glomPuJwMAH9Ag1E0g8PonFgMf7BkARJNnjFr1VbQaNuiH4Q5NHiqUMm6nXQAAAABJRU5ErkJggg=="
+	colBG      = "#0b0d1a"
+	colWall    = "#181a2e"
+	colWallLt  = "#20233c"
+	colFloorA  = "#232642"
+	colFloorB  = "#1a1c30"
+	colBone    = "#dcd7c9"
+	colFrameD  = "#565d78"
+	colText    = "#e9e4d0"
+	colMuted   = "#7f8aa3"
+	colGold    = "#e3b458"
+	colGoldD   = "#8a6a30"
+	colSilver  = "#c0c8d0"
+	colBarBG   = "#1e2136"
+	colFlameO  = "#e8722c"
+	colFlameY  = "#f5c542"
+	colShadow  = "#0a0b16"
+	colDivider = "#20243c"
 )
 
-// 16×16 pixel art stat row icons.
 const (
-	statIconPower     = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB+SURBVDhPYwCC/0iYLPD/5s2bYAxiQ4RIA/83b94MxhQZ0tLSMmoIKsBlCEkGwg0B0SB+Wlraf1VVVdIN6T39/79i883/Xl5eJBsAAmDN0q455GkGORtmMwyDxCHShAGKJhANMxDEB6sgAiArBhtCbljAAIqrIEKkA6hmhv8A8o+b99NRYXUAAAAASUVORK5CYII="
-	statIconIntellect = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACXSURBVDhPY0AHLCws/wlhqFJMAJL08vL6n5aWhhOD5LEaAhJUVVUFKwLRuDBInigDApa+xkoTbQAMwzTCMEkuAOHe0///KzbfBGOSDIBhmEYYJtoAmEZ0mmgD1LJXYKXpZwAuTNAAilIiSPJAo93/BysScWKQJXgNACn6eKAVJwa5AqcBMD/iwzi9AAIgCWIwVDkQMDAAAE6lSQL2Q6wUAAAAAElFTkSuQmCC"
-	statIconWisdom    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADTSURBVDhPlZG7DcJAEETdAKIA6IBPCTSAhERAQEhOE0iQEVIEZbgJclqggkPv1rM62YuxRxr5PvPmTueqpVR4tNL7eXIzt+VhytDrsfcvZt22/8tPLktYt+1+pfqy6cB8z7v1oJIcpgRQZcCz5TSbjEVjpU99y6AseHufp8Vhkk3O4rG8JIJH3SSCKcUcQM7isUKYN9ENGZNr3FGGSliQSjDj6DZ+OjAmpF+qIt0oLNDVGVNAsA33vYXDNrVHla/HlRcNLUB5Llhu1kP92hDUgqvqC79dKEh6HYtgAAAAAElFTkSuQmCC"
-	statIconAgility   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAx0lEQVQ4T2NkoBAwUqifga4G/EdyLdxiYl3wP2Dpa7j+DdGiMDYjMQb87z39n+HwrTcMpxc0wg0papvMUGzKSFQY/Jd2zWEAaUAHhAwA+xnk9Iv33jH8OjSZwTShHmwGjP909xQMF8ADCqTRVk2Eoa8qF6wRxAZ5AwZA3kE3AOxXGABphDkbZgiyF9ANgIcyyCZkQ2DORtaMzQvggGKzywWr01cSwppAQRphABQmyF4AG0AqwAgDUg1gYGAgKiHhNZeYlIjXAAB7llkJYJkvrwAAAABJRU5ErkJgggAA"
-	statIconInfluence = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACGSURBVDhPY8AD/mPBRAGw4rS0NDj28vICY5gcSBEuANcAYqNjNIMwADG2gOWwGYLXZDRAGwNAAOx/EA3h4gS4DSDCFXgtIcoAQmoIKSDGEgxFcJoYzTDwX1VVFaw4YOlrMA3jgySJBWDNvaf//1dsvkmyZhigSDMI/FfLXkGRASCARzMDAwD4m4FwWZcjGgAAAABJRU5ErkJggg=="
+	cardW = 700
+	cardH = 308
 )
 
-var classIconMap = map[string]string{
-	"Guardian":   iconShield,
-	"Knight":     iconSword,
-	"Paladin":    iconScroll,
-	"Berserker":  iconSword2,
-	"Warlord":    iconHelmet,
-	"Sage":       iconSpellbook,
-	"Battlemage": iconStaff,
-	"Rogue":      iconKey,
-	"Wanderer":   iconBow,
+// 32×32 pixel art item icons (base64 PNG).
+const (
+	iconSword  = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABLklEQVRYR9WWMQ6CMBSGYdRbOABx4gxM3oTdWTa5gd6EhOhE4uLMiCwOnMJF428e4ZFSQCmtLH/6StLv/f1bsC3Lelrix+6oT1p+L2IGQFEUrDPP82is1InaAe0ASZIwB1zXxVi1E7UDOgGoc4QxjmOMfd+HqnaiGTDtAFqcEB2xWZ2QnfFZQIwGmCUTQ65ZpVsxBOBbJ9ofOeFafwUgdSLPc8xHUQQNwxCaZRm0LEvh13WMA8YACEEWmx3qx9MNur5uWedTOmAMAANZ7T9/VI/LAbq8n6V7LwwEFUcqjpsOACxMaa+qqt0x60NZBrQDOI4j7JTqQRBgnhxK05Rt/zf3AAufTgAG0rCBmkJGCJCUskD6iwPGAPSdWuYEvTylA8YDdG0V6lNkoM8BKcAL+MPCG+UmDIIAAAAASUVORK5CYIIA"
+	iconSword2 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABUklEQVRYR82WO26DQBCGQ5sz0LgAlIpbuOAguE5PZ05BR02PlN5SmjSULFKUgjqda1v5pVE8y7I2j/VAM+yygm++2Qfey/91ubn/u/W0tpPm7Ue2AdC2LTKNoogydmpiYGAzAJS+axOjBsQBlFJgCMPQ6ZwYNbAZACqFKxN3DYgBVFWFb8dxzHbAtU2MGpAAoEyxJdOG5BrEtM2KA6xlQj/cjGeL7aBZamIxwCQTTdNgfJZliGmastVTFMVkA5sBeAiEDJRlifFBECB2Xcei/qc15WfDOieeAcBM5HnOavy1O6DdfP8ivn2+I9Z1bay9tZO9ediACUkAZoJq7e2P6D+rE+Lrz4e19ksMiAOgBLTO+75nRaJZT51kaGwuTFkFLHNxAMqMqPTMkyTBI9/3EcmUbmK2AXEAw1LVk8FcsYBi/GwDkgB39qnBY+uxPMfAqgBX+oXuIQYvYaIAAAAASUVORK5CYIIA"
+	iconGem    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABRklEQVRYR9WXMQrCUAxAFXXp4iAIXXX2AN5AwSN08wJOHsJDuLSewd3FzcXZVa1bh0qhiELsB/tNfxIHoy6B337z8pL+0npN+VdXzl/7W4B7hTlxQeINRWI1AEh87PWAwz8cIC59H+L0fDZi2IWxb3ytXAOgVHl3OASeRhRBPPX7ENfXq9gE14AaAJrYNNo2YNYlJigDagDOxJQBiYkqA2oAvMSj0bPIIIBwK+Jlu0UPSNdM2AZ+A+AehryXpGWA2tRcrd5OStSAOsCs0wHSQauFFjX2vNK66fE+z9H7N1kG67s05RnQBDCEMIxckEWSiCt/U2H9gzoAy4SZBduAq+e2Kta7oKoV3wBwmrABJJVTM2CbQmfimwCoiXm7DeuTOK58zqnTkZoBpwkNgJIJpDppQR9/Gal9F1AtFV8XKxNnIDaoAzwAtSfaIXzqsLAAAAAASUVORK5CYIIA"
+	iconKey    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7klEQVRYR+2WwQ3DIAxFyTIwDWuwDQuwBtPAMq2E5IMtN8VAMVKTC5IFyfPnx/Zlxp/Xh6OX5JWizeTFagDtw6UUNlHnHMS7kuvaxGWuAYAyr7U2Lu99W3POiBPixpjbJCUKnAXA3HUDBCV+roAaAGQIa0oJeYDGl3tAEwBcju7aWtviMca2giLfMhcVC64OgBIaAEiJEMJQ5jMKnAUg/e9pA5FUQnp2qPA8ACsUQIOIhgfOAICBhM4FvRVwpg7czgU7ANie0Nv/V5hQDYAdw3f2gjMAqPvhPnZ4gHX/dgDq4r/yANuOaXB7IZoFeAN+/6whBbi1kAAAAABJRU5ErkJggg=="
+	iconPotion = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABIElEQVRYR2NkIB78J14pWCUjMeqJUgQ1aHA4wEdPEuwef0tNFA9uPH4dzN9y6TlMnCjPEaUIOQQGwgEoQU+CA4gKCWJCYHA4YOVWiDu4/m0B0z4+PihpYMsWiPg3Joh4uDfcb3g9SXQIDBoHHD75CuxDW3MxlBBAF6dZCAyYA2DehUVFmBdqObdqG4SP5HPa5IKBcADMJ+BsQIIDiEngxFUYyCXhoHHAx6VXUBIBf7QOSfmfqASCmswYUKJgwB1wtfYwivu0m23pGwKjDhg0IXCTcTs47oOa2gYmDQyYA9bVVaHkArqHwKgDBl0IiHoXgNPElCZxkop5oqpMbLUhegjQzQE5dS/R6ihULs1DYCAdgNIywhMMpEQrSS0imjgAAPoJziGHZTDaAAAAAElFTkSuQmCC"
+	iconShield = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABmElEQVRYR2NkGGDASKL9/4lUT7S5RCuEWkx3B6BY2Hsau/2Hb71BCZgN0aLoAYXTo4RCYMAcALYY5mOYD03uzwT77NGjR1iTgpycHFj8jGI6rhDB8DCuEBgwB4AtDlj6GuwDWzURMD0jSg1Mq6qqovhMRkYGzH/y5AmK+O3bt8F87YZjBEMCPQQGlwOuNlih+IDUEIBphoUEUu6AexxvCNDTAeCgV8teAXZ0nOQdMH3sGGocwuI2Pj4eJTfAUv/ChQuxphUrK0hILnquAqZvTY2ABQ4jLAQGlwMcfu/DmrphPoH5FBa3sKiChQx6yMFyywFWJ+JCYNA4ACULIHFe2beilBMzF6wE82EOx6WP5BAYcAegl3DoaYDRrRnsxv+7asE03dMAzRwA8xF6yUe3cmAgHABLbygFEswhMEly6wJYVCGXgPCiEC2lDy4HwIMFmspJDQGYz2HmkBwCA+EArGkBJgirJQm1CWG1Hj6f40oDg8YBKA6BcWDtBVxFNBYfE/IoA0n9goFwALpn6d41G3QOIBT9JMsDANCtYDCjzkYBAAAAAElFTkSuQmCC"
+	iconStaff  = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiElEQVR4nGNgGOmAEZfErKUb/1PDgrRof5x2MDAwMDBRwxJKwKgDWAgpOHTwCFkG29nbEKVu8IcAsT4hFwx4CODNo/hAV5QxSjlRtuwsWWYNeAiMOmDUAQTLAVzgybuvVHHA0A0BGSFuqjhgwENg1AGjuWA0F5Bch6O3A9ABqe2CAQ+BUQeMAgA30RX7GlRZ2QAAAABJRU5ErkJggg=="
+	iconHelmet = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAtklEQVR4nGNgGAUEwKylG//PWrrxP7F8UgETpQ6kFDDikiDXV2nR/jjNxAYGPARYaG0Bekiih9DgD4FDB48wMDAwMNjZ2xDFhwFi09CAhwDVcwEugCt3DHgI0DwXECoXhm8IEFsiDngIEHQlqblhyNUFow7AmQseb4n4z8DAwLD9I2kGwvTJ+qwYormAXnUADAx4COBMA7B6nlyA3j7ABQZvCBDrA0rB4AsBT/7ldHXAgIfAKAAAwcFBPKy3LrwAAAAASUVORK5CYII="
+)
+
+// gearIcons maps equipment item slugs to pixel icons.
+var gearIcons = map[string]string{
+	"go-compiler":       iconSword,
+	"rust-axe":          iconSword2,
+	"typescript-lens":   iconGem,
+	"javascript-dagger": iconKey,
+	"python-flask":      iconPotion,
+	"csharp-bulwark":    iconShield,
+	"java-hammer":       iconStaff,
+	"cpp-gauntlet":      iconHelmet,
+}
+
+// Assets loaded from disk at startup: class sprites and the pixel font.
+// Cards render without them (no sprite, fallback font) if loading fails.
+var (
+	spriteB64 = map[string]string{}
+	fontB64   string
+)
+
+// LoadAssets reads class sprites and the embedded card font from the static
+// assets directory. Call once at startup, before serving cards.
+func LoadAssets(assetsDir string) error {
+	var firstErr error
+	for class := range classColors {
+		path := filepath.Join(assetsDir, "sprites", strings.ToLower(class)+".png")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		spriteB64[class] = base64.StdEncoding.EncodeToString(data)
+	}
+	data, err := os.ReadFile(filepath.Join(assetsDir, "fonts", "PressStart2P-latin.woff2"))
+	if err != nil {
+		if firstErr == nil {
+			firstErr = err
+		}
+	} else {
+		fontB64 = base64.StdEncoding.EncodeToString(data)
+	}
+	return firstErr
 }
 
 // cardStage maps level to an evolution tier per GAME_DESIGN.md:
@@ -80,204 +131,279 @@ func cardStage(level int) int {
 
 var tierLabels = [4]string{"", "VETERAN", "ELITE", "LEGENDARY"}
 
-// tierBorders is the card frame metal per stage: bronze, silver, gold, gold+shimmer.
-var tierBorders = [4]string{"#8a6a3f", "#c0c8d0", "#FFD700", "#FFD700"}
+// tierColors is the tier banner and scene border color per stage.
+var tierColors = [4]string{colFrameD, colSilver, colGold, colGold}
 
-type cardData struct {
-	Login             string
-	Level             int
-	NextLevel         int
-	Class             string
-	Title             string
-	TotalXP           int
-	XPInto            int
-	XPFor             int
-	XPBarWidth        int
-	XPPct             int
-	XPArcDash         int
-	AccentColor       string
-	ClassIcon         string
-	STR               int
-	INT               int
-	WIS               int
-	DEX               int
-	CHA               int
-	STRBar            int
-	INTBar            int
-	WISBar            int
-	DEXBar            int
-	CHABar            int
-	StatIconPower     string
-	StatIconIntellect string
-	StatIconWisdom    string
-	StatIconAgility   string
-	StatIconInfluence string
-	TierLabel         string
-	BorderColor       string
-	Veteran           bool
-	Elite             bool
-	Legendary         bool
+func rct(b *strings.Builder, x, y, w, h int, fill string) {
+	fmt.Fprintf(b, `<rect x="%d" y="%d" width="%d" height="%d" fill="%s"/>`, x, y, w, h, fill)
 }
 
-func statBar(val, max int) int {
-	if val <= 0 {
-		return 0
+func txt(b *strings.Builder, x, y, size int, fill, anchor, s string) {
+	if anchor != "" {
+		anchor = fmt.Sprintf(` text-anchor="%s"`, anchor)
 	}
-	b := val * max / 100
-	if b > max {
-		return max
-	}
-	return b
+	fmt.Fprintf(b, `<text x="%d" y="%d" font-size="%d" fill="%s"%s>%s</text>`, x, y, size, fill, anchor, s)
 }
 
-const cardSVG = `<svg width="840" height="336" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
-  <rect width="700" height="280" fill="#050010"/>
-  <rect x="1" y="1" width="698" height="278" fill="none" stroke="{{.BorderColor}}" stroke-width="{{if .Legendary}}4{{else}}2{{end}}">{{if .Legendary}}<animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>{{end}}</rect>
-  <rect x="5" y="5" width="690" height="270" fill="none" stroke="{{.AccentColor}}" stroke-width="1"/>
-  {{if .Elite}}<rect x="9" y="9" width="682" height="262" fill="none" stroke="{{.AccentColor}}" stroke-width="1" stroke-opacity="0.6"/>{{end}}
-  <line x1="5" y1="24" x2="5" y2="5" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="5" y1="5" x2="24" y2="5" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="676" y1="5" x2="695" y2="5" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="695" y1="5" x2="695" y2="24" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="5" y1="256" x2="5" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="5" y1="275" x2="24" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="676" y1="275" x2="695" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  <line x1="695" y1="256" x2="695" y2="275" stroke="{{.BorderColor}}" stroke-width="2.5"/>
-  {{if .Veteran}}<rect x="10" y="10" width="5" height="5" fill="{{.AccentColor}}"/>
-  <rect x="685" y="10" width="5" height="5" fill="{{.AccentColor}}"/>
-  <rect x="10" y="265" width="5" height="5" fill="{{.AccentColor}}"/>
-  <rect x="685" y="265" width="5" height="5" fill="{{.AccentColor}}"/>{{end}}
-  <image x="638" y="10" width="48" height="48" href="{{.ClassIcon}}" image-rendering="pixelated"/>
-  <text x="14" y="40" font-family="Courier New,Courier,monospace" font-size="24" font-weight="bold" fill="#ffffff">{{.Login}}</text>
-  <rect x="14" y="46" width="70" height="20" fill="{{.AccentColor}}"/>
-  <text x="49" y="60" font-family="Courier New,Courier,monospace" font-size="11" font-weight="bold" fill="#050010" text-anchor="middle">LV.{{.Level}}</text>
-  <rect x="86" y="46" width="106" height="20" fill="#180830" stroke="{{.AccentColor}}" stroke-width="1"/>
-  <text x="90" y="60" font-family="Courier New,Courier,monospace" font-size="13" fill="{{.AccentColor}}">{{.Class}}</text>
-  <text x="14" y="74" font-family="Courier New,Courier,monospace" font-size="9" fill="#AA88DD" font-style="italic">{{.Title}}</text>
-  {{if .TierLabel}}<text x="685" y="74" font-family="Courier New,Courier,monospace" font-size="9" font-weight="bold" fill="{{.BorderColor}}" text-anchor="end">{{.TierLabel}}</text>{{end}}
-  <line x1="10" y1="80" x2="685" y2="80" stroke="#3A1A7A" stroke-width="1"/>
-  <line x1="362" y1="80" x2="362" y2="256" stroke="#3A1A7A" stroke-width="1"/>
-  <polygon points="362,77 365,80 362,83 359,80" fill="{{.AccentColor}}"/>
-  <polygon points="362,254 365,257 362,260 359,257" fill="{{.AccentColor}}"/>
-  <image x="14" y="89" width="14" height="14" href="{{.StatIconPower}}" image-rendering="pixelated"/>
-  <text x="32" y="101" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">POWER</text>
-  <text x="175" y="101" font-family="Courier New,Courier,monospace" font-size="13" font-weight="bold" fill="{{.AccentColor}}" text-anchor="end">{{.STR}}</text>
-  <rect x="180" y="93" width="152" height="9" fill="#180830"/>
-  <rect x="180" y="93" width="{{.STRBar}}" height="9" fill="{{.AccentColor}}"/>
-  <image x="14" y="117" width="14" height="14" href="{{.StatIconIntellect}}" image-rendering="pixelated"/>
-  <text x="32" y="129" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">INTELLECT</text>
-  <text x="175" y="129" font-family="Courier New,Courier,monospace" font-size="13" font-weight="bold" fill="{{.AccentColor}}" text-anchor="end">{{.INT}}</text>
-  <rect x="180" y="121" width="152" height="9" fill="#180830"/>
-  <rect x="180" y="121" width="{{.INTBar}}" height="9" fill="{{.AccentColor}}"/>
-  <image x="14" y="145" width="14" height="14" href="{{.StatIconWisdom}}" image-rendering="pixelated"/>
-  <text x="32" y="157" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">WISDOM</text>
-  <text x="175" y="157" font-family="Courier New,Courier,monospace" font-size="13" font-weight="bold" fill="{{.AccentColor}}" text-anchor="end">{{.WIS}}</text>
-  <rect x="180" y="149" width="152" height="9" fill="#180830"/>
-  <rect x="180" y="149" width="{{.WISBar}}" height="9" fill="{{.AccentColor}}"/>
-  <image x="14" y="173" width="14" height="14" href="{{.StatIconAgility}}" image-rendering="pixelated"/>
-  <text x="32" y="185" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">AGILITY</text>
-  <text x="175" y="185" font-family="Courier New,Courier,monospace" font-size="13" font-weight="bold" fill="{{.AccentColor}}" text-anchor="end">{{.DEX}}</text>
-  <rect x="180" y="177" width="152" height="9" fill="#180830"/>
-  <rect x="180" y="177" width="{{.DEXBar}}" height="9" fill="{{.AccentColor}}"/>
-  <image x="14" y="201" width="14" height="14" href="{{.StatIconInfluence}}" image-rendering="pixelated"/>
-  <text x="32" y="213" font-family="Courier New,Courier,monospace" font-size="10" fill="#AA88DD">INFLUENCE</text>
-  <text x="175" y="213" font-family="Courier New,Courier,monospace" font-size="13" font-weight="bold" fill="{{.AccentColor}}" text-anchor="end">{{.CHA}}</text>
-  <rect x="180" y="205" width="152" height="9" fill="#180830"/>
-  <rect x="180" y="205" width="{{.CHABar}}" height="9" fill="{{.AccentColor}}"/>
-  <text x="14" y="234" font-family="Courier New,Courier,monospace" font-size="8" fill="#AA88DD">XP {{.TotalXP}}</text>
-  <text x="333" y="234" font-family="Courier New,Courier,monospace" font-size="8" fill="#AA88DD" text-anchor="end">{{.XPInto}} / {{.XPFor}}</text>
-  <rect x="14" y="238" width="320" height="7" fill="#180830"/>
-  <rect x="14" y="238" width="{{.XPBarWidth}}" height="7" fill="{{.AccentColor}}"/>
-  <rect x="14" y="238" width="320" height="7" fill="none" stroke="#3A1A7A" stroke-width="1"/>
-  {{if .Elite}}<rect x="14" y="238" width="320" height="7" fill="none" stroke="{{.AccentColor}}" stroke-width="1" stroke-opacity="0.6"/>{{end}}
-  <circle cx="530" cy="155" r="62" fill="none" stroke="#3A1A7A" stroke-width="1"/>
-  <circle cx="530" cy="155" r="52" fill="none" stroke="#180830" stroke-width="14"/>
-  <circle cx="530" cy="155" r="52" fill="none" stroke="{{.AccentColor}}" stroke-width="14" stroke-dasharray="{{.XPArcDash}} 327" stroke-linecap="round" transform="rotate(-90 530 155)"/>
-  {{if .Legendary}}<circle cx="530" cy="155" r="52" fill="none" stroke="#FFD700" stroke-width="14" stroke-dasharray="18 309" stroke-linecap="round" stroke-opacity="0.7" transform="rotate(-90 530 155)"><animateTransform attributeName="transform" type="rotate" from="0 530 155" to="360 530 155" dur="4s" repeatCount="indefinite" additive="sum"/></circle>{{end}}
-  <text x="530" y="144" font-family="Courier New,Courier,monospace" font-size="9" fill="#AA88DD" text-anchor="middle">LVL</text>
-  <text x="530" y="170" font-family="Courier New,Courier,monospace" font-size="32" font-weight="bold" fill="{{.AccentColor}}" text-anchor="middle">{{.Level}}</text>
-  <text x="530" y="183" font-family="Courier New,Courier,monospace" font-size="8" fill="#AA88DD" text-anchor="middle">{{.XPPct}}%</text>
-  {{if .Elite}}<rect x="470" y="214" width="120" height="17" fill="#180830" stroke="{{.AccentColor}}" stroke-width="1" stroke-opacity="0.6"/>{{end}}
-  <text x="530" y="226" font-family="Courier New,Courier,monospace" font-size="11" font-weight="bold" fill="{{.AccentColor}}" text-anchor="middle">{{.Class}}</text>
-  <text x="530" y="242" font-family="Courier New,Courier,monospace" font-size="8" fill="#AA88DD" text-anchor="middle">&#8594; LV{{.NextLevel}} in {{.XPFor}} XP</text>
-  <line x1="10" y1="258" x2="685" y2="258" stroke="#3A1A7A" stroke-width="1"/>
-  <path transform="translate(30,259) scale(0.5)" fill="#6633CC" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-  <text x="48" y="269" font-family="Courier New,Courier,monospace" font-size="7" fill="#3A1A7A">github-rpg</text>
-</svg>`
+func writeStyle(b *strings.Builder) {
+	b.WriteString("<style>")
+	if fontB64 != "" {
+		fmt.Fprintf(b, "@font-face{font-family:'Press Start 2P';src:url(data:font/woff2;base64,%s) format('woff2');}", fontB64)
+	}
+	b.WriteString("text{font-family:'Press Start 2P',monospace;}</style>")
+}
 
-var cardTmpl = template.Must(template.New("card").Parse(cardSVG))
+func writeStarfield(b *strings.Builder) {
+	stars := [][3]interface{}{
+		{300, 14, colMuted}, {420, 10, colGold}, {530, 16, colMuted}, {640, 12, colMuted},
+		{360, 292, colMuted}, {560, 296, colGold}, {620, 292, colMuted}, {680, 40, colMuted},
+	}
+	for _, s := range stars {
+		rct(b, s[0].(int), s[1].(int), 2, 2, s[2].(string))
+	}
+}
 
-const (
-	donutR    = 52
-	donutCirc = 327 // ≈ 2π*52
-)
+// writeFrame draws the classic JRPG double window border with stepped pixel corners.
+func writeFrame(b *strings.Builder, outer string) {
+	x, y, w, h, c := 2, 2, cardW-4, cardH-4, 6
+	rct(b, x+c, y, w-2*c, 3, outer)
+	rct(b, x+c, y+h-3, w-2*c, 3, outer)
+	rct(b, x, y+c, 3, h-2*c, outer)
+	rct(b, x+w-3, y+c, 3, h-2*c, outer)
+	for _, s := range [][4]int{{x, y, 1, 1}, {x + w, y, -1, 1}, {x, y + h, 1, -1}, {x + w, y + h, -1, -1}} {
+		cx, cy, dx, dy := s[0], s[1], s[2], s[3]
+		hx := cx
+		if dx < 0 {
+			hx = cx - 6
+		}
+		hy := cy + 3*dy
+		if dy < 0 {
+			hy = cy - 6
+		}
+		rct(b, hx, boolPick(dy > 0, cy+3, cy-6), 6, 3, outer)
+		rct(b, boolPick(dx > 0, cx+3, cx-6), hy, 3, 6, outer)
+	}
+	fmt.Fprintf(b, `<rect x="%d" y="%d" width="%d" height="%d" fill="none" stroke="%s" stroke-width="1"/>`, x+6, y+6, w-12, h-12, colFrameD)
+}
 
-func buildData(login string, char *stats.Character) cardData {
-	xpPercent := 0
-	if char.XPForLevel > 0 {
-		xpPercent = char.XPIntoLevel * 100 / char.XPForLevel
-		if xpPercent > 100 {
-			xpPercent = 100
+func boolPick(cond bool, a, c int) int {
+	if cond {
+		return a
+	}
+	return c
+}
+
+func writeTorch(b *strings.Builder, x, y int, flicker bool, dur string) {
+	rct(b, x, y+12, 4, 10, "#6b4a2b")
+	rct(b, x-2, y+10, 8, 3, "#4a5568")
+	anim := ""
+	if flicker {
+		anim = fmt.Sprintf(`<animate attributeName="opacity" values="1;0.5;1" dur="%s" repeatCount="indefinite"/>`, dur)
+	}
+	fmt.Fprintf(b, `<g>%s<rect x="%d" y="%d" width="6" height="6" fill="%s"/><rect x="%d" y="%d" width="4" height="6" fill="%s"/><rect x="%d" y="%d" width="2" height="5" fill="%s"/></g>`,
+		anim, x-1, y+4, colFlameO, x, y, colFlameO, x+1, y+3, colFlameY)
+}
+
+// writeScene draws the dungeon diorama: brick wall, dithered floor, torches,
+// and the class sprite.
+func writeScene(b *strings.Builder, px, py, pw, ph int, class, borderColor string, flicker bool) {
+	rct(b, px, py, pw, ph, colWall)
+	row := 0
+	for yy := py + 14; yy < py+ph-40; yy += 16 {
+		rct(b, px, yy, pw, 1, colWallLt)
+		off := 20
+		if row%2 == 1 {
+			off = 40
+		}
+		for xx := px + off; xx < px+pw-4; xx += 44 {
+			rct(b, xx, yy-14, 1, 14, colWallLt)
+		}
+		row++
+	}
+	fy := py + ph - 36
+	rct(b, px, fy, pw, 36, colFloorB)
+	for r := 0; r < 6; r++ {
+		for c := 0; c <= pw/6; c++ {
+			if (r+c)%2 == 0 {
+				rct(b, px+c*6, fy+r*6, 6, 6, colFloorA)
+			}
 		}
 	}
-	arcDash := xpPercent * donutCirc / 100
-	if xpPercent > 0 && arcDash < 20 {
-		arcDash = 20
+	rct(b, px, fy, pw, 2, colShadow)
+	writeTorch(b, px+22, py+26, flicker, "1.2s")
+	writeTorch(b, px+pw-28, py+26, flicker, "1.6s")
+	for _, g := range [][2]int{{px + 18, py + 22}, {px + 30, py + 30}, {px + pw - 32, py + 22}, {px + pw - 20, py + 30}} {
+		rct(b, g[0], g[1], 2, 2, colFlameY)
 	}
-	accent := classColors[char.Class]
-	if accent == "" {
-		accent = classColors["Wanderer"]
+	sx := px + (pw-96)/2
+	rct(b, sx+18, fy+8, 60, 6, colShadow)
+	if sprite, ok := spriteB64[class]; ok {
+		fmt.Fprintf(b, `<image x="%d" y="%d" width="96" height="96" href="data:image/png;base64,%s" image-rendering="pixelated" style="image-rendering:pixelated"/>`,
+			sx, fy-82, sprite)
 	}
-	icon := classIconMap[char.Class]
-	if icon == "" {
-		icon = iconGem
+	fmt.Fprintf(b, `<rect x="%d" y="%d" width="%d" height="%d" fill="none" stroke="%s" stroke-width="1"/>`, px, py, pw, ph, borderColor)
+}
+
+func writeRibbon(b *strings.Builder, x, y, w, h int, accentDark, label string) {
+	fmt.Fprintf(b, `<polygon points="%d,%d %d,%d %d,%d %d,%d %d,%d" fill="%s"/>`,
+		x-10, y+3, x, y+3, x, y+h-3, x-10, y+h-3, x-4, y+h/2, colGoldD)
+	fmt.Fprintf(b, `<polygon points="%d,%d %d,%d %d,%d %d,%d %d,%d" fill="%s"/>`,
+		x+w+10, y+3, x+w, y+3, x+w, y+h-3, x+w+10, y+h-3, x+w+4, y+h/2, colGoldD)
+	rct(b, x, y, w, h, accentDark)
+	fmt.Fprintf(b, `<rect x="%d" y="%d" width="%d" height="%d" fill="none" stroke="%s" stroke-width="1"/>`, x+1, y+1, w-2, h-2, colGold)
+	size := 11
+	if len(label) > 22 {
+		size = 6
+	} else if len(label) > 14 {
+		size = 8
 	}
-	stage := cardStage(char.Level)
-	return cardData{
-		Login:             html.EscapeString(login),
-		Level:             char.Level,
-		NextLevel:         char.Level + 1,
-		Class:             char.Class,
-		Title:             char.Title,
-		TotalXP:           char.TotalXP,
-		XPInto:            char.XPIntoLevel,
-		XPFor:             char.XPForLevel,
-		XPBarWidth:        xpPercent * 320 / 100,
-		XPPct:             xpPercent,
-		XPArcDash:         arcDash,
-		AccentColor:       accent,
-		ClassIcon:         icon,
-		STR:               char.Strength,
-		INT:               char.Intelligence,
-		WIS:               char.Wisdom,
-		DEX:               char.Dexterity,
-		CHA:               char.Charisma,
-		STRBar:            statBar(char.Strength, 152),
-		INTBar:            statBar(char.Intelligence, 152),
-		WISBar:            statBar(char.Wisdom, 152),
-		DEXBar:            statBar(char.Dexterity, 152),
-		CHABar:            statBar(char.Charisma, 152),
-		StatIconPower:     statIconPower,
-		StatIconIntellect: statIconIntellect,
-		StatIconWisdom:    statIconWisdom,
-		StatIconAgility:   statIconAgility,
-		StatIconInfluence: statIconInfluence,
-		TierLabel:         tierLabels[stage],
-		BorderColor:       tierBorders[stage],
-		Veteran:           stage >= 1,
-		Elite:             stage >= 2,
-		Legendary:         stage >= 3,
+	txt(b, x+w/2, y+h/2+4, size, colText, "middle", label)
+}
+
+func writeDitherBar(b *strings.Builder, x, y, w, h, pct int, color string) {
+	rct(b, x, y, w, h, colBarBG)
+	fill := w * pct / 100
+	if fill > 0 {
+		rct(b, x, y, fill, h, color)
+		rct(b, x, y, fill, 2, "#ffffff22")
+		if fill < w-4 {
+			for i := 0; i < h/2; i++ {
+				if i%2 == 0 {
+					rct(b, x+fill, y+i*2, 2, 2, color)
+				} else {
+					rct(b, x+fill+2, y+i*2, 2, 2, color)
+				}
+			}
+		}
+	}
+	fmt.Fprintf(b, `<rect x="%d" y="%d" width="%d" height="%d" fill="none" stroke="#000000" stroke-opacity="0.45" stroke-width="1"/>`, x, y, w, h)
+}
+
+func writeGearSlot(b *strings.Builder, x, y, size int, item *equipment.Item) {
+	rct(b, x, y, size, size, "#141729")
+	fmt.Fprintf(b, `<rect x="%d" y="%d" width="%d" height="%d" fill="none" stroke="%s" stroke-width="1"/>`, x, y, size, size, colFrameD)
+	for _, c := range [][2]int{{x, y}, {x + size - 3, y}, {x, y + size - 3}, {x + size - 3, y + size - 3}} {
+		rct(b, c[0], c[1], 3, 3, colGoldD)
+	}
+	if item == nil {
+		return
+	}
+	if icon, ok := gearIcons[item.Slug]; ok {
+		fmt.Fprintf(b, `<image x="%d" y="%d" width="%d" height="%d" href="%s" image-rendering="pixelated" style="image-rendering:pixelated"/>`,
+			x+4, y+4, size-8, size-8, icon)
 	}
 }
 
-// Card renders the single RPG character card as an SVG string.
-// The style param is accepted for backward-compatible URLs but ignored.
-func Card(login string, char *stats.Character, style string) (string, error) {
-	var buf bytes.Buffer
-	if err := cardTmpl.Execute(&buf, buildData(login, char)); err != nil {
-		return "", err
+// accentDark returns a dark shade of the accent for panel fills, derived by
+// halving each RGB channel twice.
+func accentDark(accent string) string {
+	if len(accent) != 7 {
+		return colBarBG
 	}
-	return buf.String(), nil
+	var r, g, bl int
+	if _, err := fmt.Sscanf(accent[1:], "%02x%02x%02x", &r, &g, &bl); err != nil {
+		return colBarBG
+	}
+	return fmt.Sprintf("#%02x%02x%02x", r/4+8, g/4+8, bl/4+16)
+}
+
+func render(login string, char *stats.Character, loadout equipment.Loadout) string {
+	accent := ClassColor(char.Class)
+	stage := cardStage(char.Level)
+	tierColor := tierColors[stage]
+	legendary := stage >= 3
+
+	xpPct := 0
+	if char.XPForLevel > 0 {
+		xpPct = char.XPIntoLevel * 100 / char.XPForLevel
+		if xpPct > 100 {
+			xpPct = 100
+		}
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, `<svg width="840" height="370" viewBox="0 0 %d %d" xmlns="http://www.w3.org/2000/svg">`, cardW, cardH)
+	writeStyle(&b)
+	rct(&b, 0, 0, cardW, cardH, colBG)
+	writeStarfield(&b)
+	frameColor := colBone
+	if legendary {
+		frameColor = colGold
+	}
+	writeFrame(&b, frameColor)
+
+	// left: dungeon scene + nameplate ribbon
+	px, py, pw, ph := 22, 22, 224, 216
+	sceneBorder := colFrameD
+	if stage >= 1 {
+		sceneBorder = tierColor
+	}
+	writeScene(&b, px, py, pw, ph, char.Class, sceneBorder, legendary)
+	writeRibbon(&b, px+22, py+ph+14, pw-44, 26, accentDark(accent), login)
+	txt(&b, 28, cardH-16, 6, colFrameD, "", "GITHUB-RPG")
+
+	// right: header
+	rx := 270
+	txt(&b, rx, 48, 17, colText, "", fmt.Sprintf("LV %d", char.Level))
+	fmt.Fprintf(&b, `<rect x="%d" y="30" width="102" height="22" fill="none" stroke="%s" stroke-width="1"/>`, rx+124, accent)
+	txt(&b, rx+175, 45, 8, accent, "middle", strings.ToUpper(char.Class))
+	if stage >= 1 {
+		txt(&b, cardW-28, 45, 9, tierColor, "end", "&#9733; "+tierLabels[stage])
+	}
+	txt(&b, rx, 70, 7, colMuted, "", strings.ToUpper(char.Title))
+	rct(&b, rx, 82, cardW-28-rx, 2, colDivider)
+
+	// right: stats
+	y0, rowH := 98, 22
+	barX := rx + 148
+	barW := cardW - 28 - barX
+	rows := []struct {
+		name string
+		val  int
+	}{
+		{"POWER", char.Strength}, {"INTELLECT", char.Intelligence}, {"WISDOM", char.Wisdom},
+		{"AGILITY", char.Dexterity}, {"INFLUENCE", char.Charisma},
+	}
+	for i, row := range rows {
+		y := y0 + i*rowH
+		txt(&b, rx, y+10, 8, colMuted, "", row.name)
+		if row.val >= 100 {
+			txt(&b, barX-10, y+10, 8, colGold, "end", "MAX")
+			writeDitherBar(&b, barX, y, barW, 12, 100, colGold)
+		} else {
+			txt(&b, barX-10, y+10, 9, colText, "end", fmt.Sprintf("%d", row.val))
+			writeDitherBar(&b, barX, y, barW, 12, row.val, accent)
+		}
+	}
+
+	// right: exp
+	ey := y0 + 5*rowH + 6
+	txt(&b, rx, ey+10, 8, colGold, "", "EXP")
+	writeDitherBar(&b, rx+44, ey, cardW-28-(rx+44)-104, 12, xpPct, colGold)
+	txt(&b, cardW-28, ey+10, 8, colText, "end", fmt.Sprintf("%d/%d", char.XPIntoLevel, char.XPForLevel))
+	txt(&b, rx, ey+24, 6, colMuted, "", fmt.Sprintf("NEXT LV %d IN %d XP", char.Level+1, char.XPForLevel-char.XPIntoLevel))
+
+	// right: gear slots
+	gy := ey + 34
+	txt(&b, rx, gy+18, 8, colMuted, "", "GEAR")
+	gx, size, pitch := rx+64, 28, 112
+	for i, item := range []*equipment.Item{loadout.Weapon, loadout.Shield, loadout.Accessory} {
+		cx := gx + i*pitch + (pitch-size)/2
+		writeGearSlot(&b, cx, gy, size, item)
+		label, color := "EMPTY", colFrameD
+		if item != nil {
+			label, color = strings.ToUpper(item.Name), colMuted
+		}
+		txt(&b, gx+i*pitch+pitch/2, gy+size+12, 6, color, "middle", label)
+	}
+
+	b.WriteString("</svg>")
+	return b.String()
+}
+
+// Card renders the RPG character card as an SVG string.
+func Card(login string, char *stats.Character, loadout equipment.Loadout) (string, error) {
+	return render(html.EscapeString(login), char, loadout), nil
 }
 
 var demoChars = map[string]*stats.Character{
@@ -292,21 +418,50 @@ var demoChars = map[string]*stats.Character{
 	"Wanderer":   {Class: "Wanderer", Level: 14, Title: "The Pathfinder", TotalXP: 12000, XPIntoLevel: 400, XPForLevel: 3200, Strength: 60, Intelligence: 55, Wisdom: 70, Dexterity: 85, Charisma: 50},
 }
 
+// demoWeapons is each demo class's weapon slot, matching its language item.
+var demoWeapons = map[string]string{
+	"Guardian":   "go-compiler",
+	"Berserker":  "rust-axe",
+	"Paladin":    "typescript-lens",
+	"Rogue":      "javascript-dagger",
+	"Sage":       "python-flask",
+	"Knight":     "csharp-bulwark",
+	"Battlemage": "java-hammer",
+	"Warlord":    "cpp-gauntlet",
+	"Wanderer":   "go-compiler",
+}
+
+func demoLoadout(class string) equipment.Loadout {
+	pick := func(slug string) *equipment.Item {
+		if it, ok := equipment.Lookup(slug); ok {
+			return &it
+		}
+		return nil
+	}
+	weapon := demoWeapons[class]
+	shield := "csharp-bulwark"
+	if weapon == shield {
+		shield = "go-compiler"
+	}
+	accessory := "python-flask"
+	if weapon == accessory {
+		accessory = "typescript-lens"
+	}
+	return equipment.Loadout{Weapon: pick(weapon), Shield: pick(shield), Accessory: pick(accessory)}
+}
+
 // Demo renders a sample card for a class. A level > 0 overrides the sample
 // character's level, so the evolution tiers can be previewed.
 func Demo(class string, level int) (string, error) {
 	char, ok := demoChars[class]
 	if !ok {
-		char = demoChars["Wanderer"]
+		class = "Wanderer"
+		char = demoChars[class]
 	}
 	if level > 0 {
 		c := *char
 		c.Level = level
 		char = &c
 	}
-	var buf bytes.Buffer
-	if err := cardTmpl.Execute(&buf, buildData(class, char)); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
+	return render(class, char, demoLoadout(class)), nil
 }
