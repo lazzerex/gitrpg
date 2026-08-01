@@ -26,7 +26,6 @@
     var startBtn = document.getElementById('start-btn');
     var instructionsBtn = document.getElementById('instructions-btn');
     var instructions = document.getElementById('arena-instructions');
-    var pauseBtn = document.getElementById('pause-btn');
 
     function img(src) {
         var i = new Image();
@@ -34,15 +33,15 @@
         return i;
     }
     var classWeapons = {
-        guardian: { kind: 'melee', label: 'BLADE ARC', color: '#00add8' },
-        knight: { kind: 'melee', label: 'BLADE ARC', color: '#9b72cf' },
-        warlord: { kind: 'melee', label: 'BLADE ARC', color: '#f34b7d' },
-        berserker: { kind: 'spin', label: 'WHIRLWIND', color: '#e05d44' },
-        sage: { kind: 'orb', label: 'ARCANE ORB', color: '#4b8bbe' },
-        battlemage: { kind: 'orb', label: 'ARCANE ORB', color: '#c07d28' },
-        rogue: { kind: 'spread', label: 'FAN OF KNIVES', color: '#e8c94a' },
-        paladin: { kind: 'pierce', label: 'HOLY LANCE', color: '#3178c6' },
-        wanderer: { kind: 'pierce', label: 'PIERCING ARROW', color: '#6e7681' }
+        guardian: { kind: 'melee', label: 'BLADE ARC', color: '#00add8', cd: 0.42, mult: 1.6, range: 62, arc: 1.0, knock: 18, width: 4 },
+        knight: { kind: 'melee', label: 'LONGSWORD', color: '#9b72cf', cd: 0.52, mult: 2.1, range: 76, arc: 0.55, knock: 14, width: 3 },
+        warlord: { kind: 'melee', label: 'WAR CLEAVER', color: '#f34b7d', cd: 0.78, mult: 3.2, range: 68, arc: 1.5, knock: 34, width: 7, shake: 4 },
+        berserker: { kind: 'spin', label: 'WHIRLWIND', color: '#e05d44', cd: 0.5, mult: 1.2, range: 60, knock: 16, width: 5 },
+        sage: { kind: 'orb', label: 'ARCANE ORB', color: '#4b8bbe', cd: 0.55, mult: 1.5, speed: 200, blast: 52, radius: 7 },
+        battlemage: { kind: 'orb', label: 'EMBER BOLT', color: '#c07d28', cd: 0.32, mult: 0.85, speed: 300, blast: 32, radius: 4 },
+        rogue: { kind: 'spread', label: 'FAN OF KNIVES', color: '#e8c94a', cd: 0.32, mult: 0.55, count: 5, spread: 0.2, speed: 360 },
+        paladin: { kind: 'pierce', label: 'HOLY LANCE', color: '#3178c6', cd: 0.45, mult: 1.4, speed: 420, width: 5 },
+        wanderer: { kind: 'pierce', label: 'PIERCING ARROW', color: '#6e7681', cd: 0.3, mult: 0.85, speed: 540, width: 2 }
     };
     var classOrder = ['guardian', 'berserker', 'paladin', 'rogue', 'sage', 'knight', 'battlemage', 'warlord', 'wanderer'];
 
@@ -64,6 +63,7 @@
     };
 
     var SIZE = 32;
+    var wpnColor = accent;
     var keys = {};
     var mouse = { x: W / 2, y: 0 };
     var mode = 'menu'; // menu | play | ending | win | over
@@ -71,6 +71,7 @@
 
     function setClass(cls) {
         selectedClass = cls;
+        wpnColor = classWeapons[cls].color;
         playerImg = img(spritePath(cls));
         playerImgB = img(spritePath(cls).replace('.png', '_b.png'));
         classPreview.src = spritePath(cls);
@@ -85,11 +86,17 @@
     }
 
     var enemyTypes = {
-        slime: { hp: 20, hpW: 5, speed: 60, speedW: 4, maxSpeed: 140, touch: 15, color: '#5cb85c' },
-        imp: { hp: 15, hpW: 4, speed: 70, speedW: 3, maxSpeed: 120, touch: 10, color: '#e05d44' },
-        wraith: { hp: 12, hpW: 3, speed: 40, speedW: 2, maxSpeed: 80, touch: 20, color: '#9b72cf' },
+        slime: { hp: 22, hpW: 6, speed: 60, speedW: 4, maxSpeed: 140, touch: 13, color: '#5cb85c' },
+        imp: { hp: 17, hpW: 4, speed: 70, speedW: 3, maxSpeed: 120, touch: 9, color: '#e05d44' },
+        wraith: { hp: 14, hpW: 3, speed: 40, speedW: 2, maxSpeed: 80, touch: 16, color: '#9b72cf' },
         boss: { hp: 400, hpW: 0, speed: 55, speedW: 0, maxSpeed: 55, touch: 25, color: '#8e2a3c' }
     };
+
+    // Player damage swings from ~10 to ~50 depending on POWER, so enemy HP
+    // tracks it — otherwise strong characters one-shot everything.
+    function hpScale() {
+        return 0.8 + state.player.dmg / 30;
+    }
 
     function newState() {
         return {
@@ -125,18 +132,22 @@
         if (edge === 1) y = H;
         if (edge === 2) x = -size;
         if (edge === 3) x = W;
-        var hp = t.hp + state.wave * t.hpW;
+        // Wave 1 gets base values; each later wave adds one step.
+        var step = state.wave - 1;
+        var hp = Math.round((t.hp + step * t.hpW) * hpScale());
         if (type === 'boss') {
             x = W / 2 - size / 2;
             y = -size;
-            hp = 400 + level * 4;
+            hp = Math.round((400 + level * 5) * hpScale());
         }
         state.enemies.push({
             type: type, x: x, y: y, size: size,
             hp: hp, maxHp: hp,
-            speed: Math.min(t.speed + state.wave * t.speedW, t.maxSpeed),
+            speed: Math.min(t.speed + step * t.speedW, t.maxSpeed),
             flash: 0, timer: 1 + Math.random() * 1.5, fade: 1,
-            phase: 'chase', phaseT: 2, dashX: 0, dashY: 0
+            phase: 'chase', phaseT: 2, dashX: 0, dashY: 0,
+            lunge: 0, wind: 0, burst: 0, orbit: Math.random() < 0.5 ? 1 : -1,
+            shotT: 2.5
         });
     }
 
@@ -147,7 +158,8 @@
         var q = [];
         var i;
         if (w >= MAX_WAVE) {
-            state.spawnQueue = ['wraith', 'wraith', 'imp', 'imp', 'slime', 'slime', 'boss'];
+            state.spawnQueue = ['wraith', 'wraith', 'wraith', 'imp', 'imp', 'imp', 'imp',
+                'slime', 'slime', 'slime', 'slime', 'slime', 'boss'];
             state.spawnTimer = 0.3;
             return;
         }
@@ -201,13 +213,11 @@
         }
     }
 
-    var weaponCds = { melee: 0.45, spin: 0.6, orb: 0.5, spread: 0.35, pierce: 0.4 };
-
     function shoot() {
         var p = state.player;
         if (p.fireCd > 0) return;
         var wpn = classWeapons[selectedClass];
-        p.fireCd = weaponCds[wpn.kind] * (state.buffs.bolt > 0 ? 0.5 : 1);
+        p.fireCd = wpn.cd * (state.buffs.bolt > 0 ? 0.5 : 1);
         p.recoil = 4;
         var dir = aimDir();
         var cx = p.x + SIZE / 2, cy = p.y + SIZE / 2;
@@ -216,47 +226,52 @@
 
         if (wpn.kind === 'melee' || wpn.kind === 'spin') {
             var full = wpn.kind === 'spin';
-            var range = full ? 60 : 58;
-            state.slash = { x: cx, y: cy, ang: ang, t: 0.15, full: full, r: range - 8 };
+            state.slash = {
+                x: cx, y: cy, ang: ang, t: 0.15, full: full,
+                r: wpn.range - 8, arc: wpn.arc, color: wpn.color, width: wpn.width
+            };
             for (i = 0; i < state.enemies.length; i++) {
                 e = state.enemies[i];
                 ex = e.x + e.size / 2 - cx;
                 ey = e.y + e.size / 2 - cy;
                 d = Math.sqrt(ex * ex + ey * ey);
-                if (d > range + e.size / 4) continue;
+                if (d > wpn.range + e.size / 4) continue;
                 if (!full) {
                     var diff = Math.abs(Math.atan2(ey, ex) - ang);
                     if (diff > Math.PI) diff = Math.PI * 2 - diff;
-                    if (diff > 1.0) continue;
+                    if (diff > wpn.arc) continue;
                 }
                 d = d || 1;
-                hitEnemy(e, dmgFor(full ? 1.2 : 1.6), ex / d * 18, ey / d * 18);
+                hitEnemy(e, dmgFor(wpn.mult), ex / d * wpn.knock, ey / d * wpn.knock);
             }
-            burst(cx + dir.x * 30, cy + dir.y * 30, accent, 4, 60);
+            if (wpn.shake) state.shake = Math.max(state.shake, wpn.shake);
+            burst(cx + dir.x * 30, cy + dir.y * 30, wpn.color, 4, 60);
         } else if (wpn.kind === 'orb') {
             state.shots.push({
-                kind: 'orb', mult: 1.3,
-                x: cx + dir.x * 18, y: cy + dir.y * 18,
-                vx: dir.x * 210, vy: dir.y * 210
+                kind: 'orb', mult: wpn.mult, color: wpn.color,
+                radius: wpn.radius, blast: wpn.blast,
+                x: cx, y: cy,
+                vx: dir.x * wpn.speed, vy: dir.y * wpn.speed
             });
         } else if (wpn.kind === 'spread') {
-            for (i = -1; i <= 1; i++) {
-                var a = ang + i * 0.22;
+            var half = (wpn.count - 1) / 2;
+            for (i = 0; i < wpn.count; i++) {
+                var a = ang + (i - half) * wpn.spread;
                 state.shots.push({
-                    kind: 'shot', mult: 0.6,
-                    x: cx + Math.cos(a) * 18, y: cy + Math.sin(a) * 18,
-                    vx: Math.cos(a) * 360, vy: Math.sin(a) * 360
+                    kind: 'shot', mult: wpn.mult, color: wpn.color,
+                    x: cx, y: cy,
+                    vx: Math.cos(a) * wpn.speed, vy: Math.sin(a) * wpn.speed
                 });
             }
         } else if (wpn.kind === 'pierce') {
             state.shots.push({
-                kind: 'pierce', mult: 1.0,
-                x: cx + dir.x * 18, y: cy + dir.y * 18,
-                vx: dir.x * 460, vy: dir.y * 460, hitList: []
+                kind: 'pierce', mult: wpn.mult, color: wpn.color, width: wpn.width,
+                x: cx, y: cy,
+                vx: dir.x * wpn.speed, vy: dir.y * wpn.speed, hitList: []
             });
         }
         if (wpn.kind !== 'melee' && wpn.kind !== 'spin') {
-            burst(cx + dir.x * 18, cy + dir.y * 18, accent, 2, 40);
+            burst(cx + dir.x * 18, cy + dir.y * 18, wpn.color, 2, 40);
         }
     }
 
@@ -290,15 +305,10 @@
         state.kills++;
         if (e.type === 'boss') {
             state.shake = 10;
-            for (var j = state.enemies.length - 1; j >= 0; j--) {
-                var o = state.enemies[j];
-                burst(o.x + o.size / 2, o.y + o.size / 2, enemyTypes[o.type].color, 8, 100);
-                state.enemies.splice(j, 1);
-            }
-            state.spawnQueue = [];
+            floatText(W / 2, H / 2 - 30, 'THE WARDEN FALLS', '#FFD700');
         }
         if (state.enemies.length === 0 && state.spawnQueue.length === 0 && state.wave >= MAX_WAVE) {
-            endGame('win', 'VICTORY!', 'THE WARDEN FALLS · ' + state.kills + ' KILLS', 1.8);
+            endGame('win', 'VICTORY!', 'ARENA CLEARED · ' + state.kills + ' KILLS', 1.8);
         }
     }
 
@@ -317,7 +327,6 @@
         mode = 'play';
         hideOverlay();
         menu.style.display = 'none';
-        pauseBtn.style.display = 'block';
         retryBtn.textContent = 'TRY AGAIN';
         spawnWave();
     }
@@ -327,7 +336,6 @@
         mode = 'menu';
         hideOverlay();
         menu.style.display = 'flex';
-        pauseBtn.style.display = 'none';
         retryBtn.textContent = 'TRY AGAIN';
     }
 
@@ -351,33 +359,71 @@
         var d = Math.sqrt(dx * dx + dy * dy) || 1;
 
         if (e.type === 'slime') {
-            e.x += dx / d * e.speed * dt;
-            e.y += dy / d * e.speed * dt;
+            if (e.lunge > 0) {
+                e.lunge -= dt;
+                e.x += e.dashX * dt;
+                e.y += e.dashY * dt;
+            } else if (e.wind > 0) {
+                e.wind -= dt;
+                e.flash = 0.05;
+                if (e.wind <= 0) {
+                    e.lunge = 0.32;
+                    e.dashX = dx / d * e.speed * 3.4;
+                    e.dashY = dy / d * e.speed * 3.4;
+                }
+            } else {
+                e.x += dx / d * e.speed * dt;
+                e.y += dy / d * e.speed * dt;
+                e.timer -= dt;
+                if (e.timer <= 0) {
+                    e.timer = 2.5 + Math.random() * 2;
+                    if (d < 170 && state.wave >= 2) e.wind = 0.35;
+                }
+            }
         } else if (e.type === 'imp') {
-            var want = 140;
-            var dir = d > want ? 1 : -0.6;
-            e.x += dx / d * e.speed * dt * dir;
-            e.y += dy / d * e.speed * dt * dir;
+            var want = 130;
+            var dir = d > want ? 1 : -0.7;
+            e.x += (dx / d * dir - dy / d * e.orbit * 0.8) * e.speed * dt;
+            e.y += (dy / d * dir + dx / d * e.orbit * 0.8) * e.speed * dt;
             e.timer -= dt;
             if (e.timer <= 0 && e.x > 0 && e.x < W && e.y > 0 && e.y < H) {
-                e.timer = 2;
-                state.enemyShots.push({
-                    x: e.x + SIZE / 2, y: e.y + SIZE / 2,
-                    vx: dx / d * 150, vy: dy / d * 150
-                });
+                e.burst = state.wave >= 3 ? 3 : 2;
+                e.timer = 2.8 - state.wave * 0.1 + Math.random();
+            }
+            if (e.burst > 0) {
+                e.shotT -= dt;
+                if (e.shotT <= 0) {
+                    e.burst--;
+                    e.shotT = 0.16;
+                    state.enemyShots.push({
+                        x: e.x + SIZE / 2, y: e.y + SIZE / 2,
+                        vx: dx / d * 170, vy: dy / d * 170
+                    });
+                }
+            } else {
+                e.shotT = 0;
             }
         } else if (e.type === 'wraith') {
-            e.x += dx / d * e.speed * dt;
-            e.y += dy / d * e.speed * dt;
+            if (e.lunge > 0) {
+                e.lunge -= dt;
+                e.x += e.dashX * dt;
+                e.y += e.dashY * dt;
+            } else {
+                e.x += dx / d * e.speed * dt;
+                e.y += dy / d * e.speed * dt;
+            }
             e.timer -= dt;
             if (e.timer <= 0) {
-                e.timer = 2.2;
+                e.timer = 2.8 - state.wave * 0.2 + Math.random() * 1.2;
                 burst(e.x + SIZE / 2, e.y + SIZE / 2, t.color, 6, 70);
                 var a = Math.random() * Math.PI * 2;
-                e.x = Math.max(0, Math.min(W - SIZE, p.x + Math.cos(a) * 90));
-                e.y = Math.max(0, Math.min(H - SIZE, p.y + Math.sin(a) * 90));
+                e.x = Math.max(0, Math.min(W - SIZE, p.x + Math.cos(a) * 80));
+                e.y = Math.max(0, Math.min(H - SIZE, p.y + Math.sin(a) * 80));
                 e.fade = 0;
                 burst(e.x + SIZE / 2, e.y + SIZE / 2, t.color, 6, 70);
+                e.lunge = 0.4;
+                e.dashX = (p.x - e.x) / 80 * 150;
+                e.dashY = (p.y - e.y) / 80 * 150;
             }
             e.fade = Math.min(1, e.fade + dt * 4);
         } else if (e.type === 'boss') {
@@ -392,45 +438,60 @@
     }
 
     function updateBoss(e, dt, dx, dy, d) {
+        var i, a;
         e.phaseT -= dt;
         if (e.phase === 'chase') {
             e.x += dx / d * e.speed * dt;
             e.y += dy / d * e.speed * dt;
+            e.shotT -= dt;
+            if (e.shotT <= 0) {
+                e.shotT = 2.2 + Math.random();
+                for (i = -1; i <= 1; i++) {
+                    a = Math.atan2(dy, dx) + i * 0.28;
+                    state.enemyShots.push({
+                        x: e.x + e.size / 2, y: e.y + e.size / 2,
+                        vx: Math.cos(a) * 190, vy: Math.sin(a) * 190
+                    });
+                }
+            }
             if (e.phaseT <= 0) {
                 var r = Math.random();
                 var adds = state.enemies.length - 1;
-                if (r < 0.35) {
+                if (r < 0.55) {
                     e.phase = 'telegraph';
-                    e.phaseT = 0.6;
-                } else if (r < 0.7) {
-                    for (var i = 0; i < 10; i++) {
-                        var a = i / 10 * Math.PI * 2;
+                    e.phaseT = 0.45;
+                    e.burst = Math.random() < 0.25 ? 2 : 1;
+                } else if (r < 0.82) {
+                    var spin = Math.random() * Math.PI * 2;
+                    for (i = 0; i < 12; i++) {
+                        a = spin + i / 12 * Math.PI * 2;
                         state.enemyShots.push({
                             x: e.x + e.size / 2, y: e.y + e.size / 2,
-                            vx: Math.cos(a) * 140, vy: Math.sin(a) * 140
+                            vx: Math.cos(a) * 150, vy: Math.sin(a) * 150
                         });
                     }
                     burst(e.x + e.size / 2, e.y + e.size / 2, '#e05d44', 10, 100);
                     e.phase = 'chase';
-                    e.phaseT = 1.6;
-                } else if (adds < 4) {
+                    e.phaseT = 1.2;
+                } else if (adds < 6) {
                     spawnEnemy('slime');
                     spawnEnemy('slime');
+                    spawnEnemy(Math.random() < 0.5 ? 'imp' : 'wraith');
                     floatText(e.x + e.size / 2, e.y - 8, 'SUMMON', '#9b72cf');
                     e.phase = 'chase';
-                    e.phaseT = 2.2;
+                    e.phaseT = 1.8;
                 } else {
                     e.phase = 'chase';
-                    e.phaseT = 1.5;
+                    e.phaseT = 1;
                 }
             }
         } else if (e.phase === 'telegraph') {
             e.flash = 0.05;
             if (e.phaseT <= 0) {
                 e.phase = 'dash';
-                e.phaseT = 0.55;
-                e.dashX = dx / d * 380;
-                e.dashY = dy / d * 380;
+                e.phaseT = 0.5;
+                e.dashX = dx / d * 420;
+                e.dashY = dy / d * 420;
                 floatText(e.x + e.size / 2, e.y - 8, 'CHARGE!', '#FFD700');
             }
         } else if (e.phase === 'dash') {
@@ -439,8 +500,14 @@
             e.x = Math.max(0, Math.min(W - e.size, e.x));
             e.y = Math.max(0, Math.min(H - e.size, e.y));
             if (e.phaseT <= 0) {
-                e.phase = 'chase';
-                e.phaseT = 2;
+                e.burst--;
+                if (e.burst > 0) {
+                    e.phase = 'telegraph';
+                    e.phaseT = 0.35;
+                } else {
+                    e.phase = 'chase';
+                    e.phaseT = 1.4;
+                }
             }
         }
     }
@@ -471,7 +538,7 @@
                 state.spawnTimer -= dt;
                 if (state.spawnTimer <= 0) {
                     spawnEnemy(state.spawnQueue.pop());
-                    state.spawnTimer = 0.4 + Math.random() * 0.8;
+                    state.spawnTimer = 0.35 + Math.random() * 0.6;
                 }
             }
 
@@ -499,7 +566,7 @@
                     if (px0 * px0 + py0 * py0 < pr * pr && s.hitList.indexOf(e) === -1) {
                         s.hitList.push(e);
                         hitEnemy(e, dmgFor(s.mult), 0, 0);
-                        burst(s.x, s.y, accent, 3, 60);
+                        burst(s.x, s.y, s.color, 3, 60);
                     }
                 }
                 continue;
@@ -510,18 +577,18 @@
                 var ex = e.x + er - s.x, ey = e.y + er - s.y;
                 if (ex * ex + ey * ey < er * er) {
                     if (s.kind === 'orb') {
-                        burst(s.x, s.y, accent, 14, 130);
+                        burst(s.x, s.y, s.color, 14, 130);
                         state.shake = Math.max(state.shake, 3);
                         for (var k = 0; k < state.enemies.length; k++) {
                             var o = state.enemies[k];
                             var ox = o.x + o.size / 2 - s.x, oy = o.y + o.size / 2 - s.y;
-                            if (ox * ox + oy * oy < 46 * 46) {
+                            if (ox * ox + oy * oy < s.blast * s.blast) {
                                 hitEnemy(o, dmgFor(s.mult), 0, 0);
                             }
                         }
                     } else {
                         hitEnemy(e, dmgFor(s.mult), 0, 0);
-                        burst(s.x, s.y, accent, 4, 70);
+                        burst(s.x, s.y, s.color, 4, 70);
                     }
                     state.shots.splice(i, 1);
                     break;
@@ -666,14 +733,14 @@
         }
 
         if (state.slash) {
-            ctx.strokeStyle = accent;
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = state.slash.color;
+            ctx.lineWidth = state.slash.width;
             ctx.globalAlpha = Math.min(1, state.slash.t * 8);
             ctx.beginPath();
             if (state.slash.full) {
                 ctx.arc(state.slash.x, state.slash.y, state.slash.r, 0, Math.PI * 2);
             } else {
-                ctx.arc(state.slash.x, state.slash.y, state.slash.r, state.slash.ang - 0.9, state.slash.ang + 0.9);
+                ctx.arc(state.slash.x, state.slash.y, state.slash.r, state.slash.ang - state.slash.arc, state.slash.ang + state.slash.arc);
             }
             ctx.stroke();
             ctx.lineWidth = 1;
@@ -685,7 +752,7 @@
             var ax = p.x + SIZE / 2 + dir.x * 30;
             var ay = p.y + SIZE / 2 + dir.y * 30;
             var ang = Math.atan2(dir.y, dir.x);
-            ctx.fillStyle = accent;
+            ctx.fillStyle = wpnColor;
             ctx.beginPath();
             ctx.moveTo(ax + Math.cos(ang) * 7, ay + Math.sin(ang) * 7);
             ctx.lineTo(ax + Math.cos(ang + 2.5) * 5, ay + Math.sin(ang + 2.5) * 5);
@@ -695,23 +762,36 @@
 
         for (i = 0; i < state.shots.length; i++) {
             var sh = state.shots[i];
-            ctx.fillStyle = accent;
+            ctx.fillStyle = sh.color;
             if (sh.kind === 'orb') {
-                var pulse = 5 + Math.sin(Date.now() / 60) * 1.5;
+                var pulse = sh.radius + Math.sin(Date.now() / 60) * 1.5;
                 ctx.beginPath();
                 ctx.arc(sh.x, sh.y, pulse, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(sh.x, sh.y, pulse + 2, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
             } else if (sh.kind === 'pierce') {
                 var sl = Math.sqrt(sh.vx * sh.vx + sh.vy * sh.vy) || 1;
-                ctx.strokeStyle = accent;
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = sh.color;
+                ctx.lineWidth = sh.width;
                 ctx.beginPath();
-                ctx.moveTo(sh.x - sh.vx / sl * 10, sh.y - sh.vy / sl * 10);
-                ctx.lineTo(sh.x + sh.vx / sl * 4, sh.y + sh.vy / sl * 4);
+                ctx.moveTo(sh.x - sh.vx / sl * 14, sh.y - sh.vy / sl * 14);
+                ctx.lineTo(sh.x + sh.vx / sl * 5, sh.y + sh.vy / sl * 5);
                 ctx.stroke();
                 ctx.lineWidth = 1;
             } else {
-                ctx.fillRect(sh.x - 3, sh.y - 3, 6, 6);
+                var kl = Math.sqrt(sh.vx * sh.vx + sh.vy * sh.vy) || 1;
+                ctx.strokeStyle = sh.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(sh.x - sh.vx / kl * 6, sh.y - sh.vy / kl * 6);
+                ctx.lineTo(sh.x + sh.vx / kl * 3, sh.y + sh.vy / kl * 3);
+                ctx.stroke();
+                ctx.lineWidth = 1;
             }
         }
         ctx.fillStyle = '#e05d44';
@@ -806,7 +886,6 @@
         else restart();
     });
     menuBtn.addEventListener('click', toMenu);
-    pauseBtn.addEventListener('click', pauseGame);
     startBtn.addEventListener('click', restart);
     prevClassBtn.addEventListener('click', function () { cycleClass(-1); });
     nextClassBtn.addEventListener('click', function () { cycleClass(1); });
