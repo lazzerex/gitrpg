@@ -331,18 +331,18 @@ func render(login string, char *stats.Character, loadout equipment.Loadout) stri
 
 	// right: header
 	rx := 270
-	txt(&b, rx, 48, 17, colText, "", fmt.Sprintf("LV %d", char.Level))
-	fmt.Fprintf(&b, `<rect x="%d" y="30" width="102" height="22" fill="none" stroke="%s" stroke-width="1"/>`, rx+124, accent)
-	txt(&b, rx+175, 45, 8, accent, "middle", strings.ToUpper(char.Class))
+	txt(&b, rx, 50, 20, colText, "", fmt.Sprintf("LV %d", char.Level))
+	fmt.Fprintf(&b, `<rect x="%d" y="28" width="116" height="26" fill="none" stroke="%s" stroke-width="1"/>`, rx+124, accent)
+	txt(&b, rx+182, 47, 9, accent, "middle", strings.ToUpper(char.Class))
 	if stage >= 1 {
-		txt(&b, cardW-28, 45, 9, tierColor, "end", "* "+tierLabels[stage])
+		txt(&b, cardW-28, 47, 10, tierColor, "end", "* "+tierLabels[stage])
 	}
-	txt(&b, rx, 70, 7, colMuted, "", strings.ToUpper(char.Title))
-	rct(&b, rx, 82, cardW-28-rx, 2, colDivider)
+	txt(&b, rx, 74, 9, colMuted, "", strings.ToUpper(char.Title))
+	rct(&b, rx, 86, cardW-28-rx, 2, colDivider)
 
 	// right: stats
-	y0, rowH := 98, 22
-	barX := rx + 148
+	y0, rowH := 96, 22
+	barX := rx + 160
 	barW := cardW - 28 - barX
 	rows := []struct {
 		name string
@@ -353,27 +353,27 @@ func render(login string, char *stats.Character, loadout equipment.Loadout) stri
 	}
 	for i, row := range rows {
 		y := y0 + i*rowH
-		txt(&b, rx, y+10, 8, colMuted, "", row.name)
+		txt(&b, rx, y+11, 10, colMuted, "", row.name)
 		if row.val >= 100 {
-			txt(&b, barX-10, y+10, 8, colGold, "end", "MAX")
-			writeDitherBar(&b, barX, y, barW, 12, 100, colGold)
+			txt(&b, barX-10, y+11, 10, colGold, "end", "MAX")
+			writeDitherBar(&b, barX, y, barW, 13, 100, colGold)
 		} else {
-			txt(&b, barX-10, y+10, 9, colText, "end", fmt.Sprintf("%d", row.val))
-			writeDitherBar(&b, barX, y, barW, 12, row.val, accent)
+			txt(&b, barX-10, y+11, 11, colText, "end", fmt.Sprintf("%d", row.val))
+			writeDitherBar(&b, barX, y, barW, 13, row.val, accent)
 		}
 	}
 
 	// right: exp
 	ey := y0 + 5*rowH + 6
-	txt(&b, rx, ey+10, 8, colGold, "", "EXP")
-	writeDitherBar(&b, rx+44, ey, cardW-28-(rx+44)-104, 12, xpPct, colGold)
-	txt(&b, cardW-28, ey+10, 8, colText, "end", fmt.Sprintf("%d/%d", char.XPIntoLevel, char.XPForLevel))
-	txt(&b, rx, ey+24, 6, colMuted, "", fmt.Sprintf("NEXT LV %d IN %d XP", char.Level+1, char.XPForLevel-char.XPIntoLevel))
+	txt(&b, rx, ey+11, 10, colGold, "", "EXP")
+	writeDitherBar(&b, rx+52, ey, cardW-28-(rx+52)-128, 13, xpPct, colGold)
+	txt(&b, cardW-28, ey+11, 10, colText, "end", fmt.Sprintf("%d/%d", char.XPIntoLevel, char.XPForLevel))
+	txt(&b, rx, ey+28, 8, colMuted, "", fmt.Sprintf("NEXT LV %d IN %d XP", char.Level+1, char.XPForLevel-char.XPIntoLevel))
 
 	// right: gear slots
-	gy := ey + 34
-	txt(&b, rx, gy+18, 8, colMuted, "", "GEAR")
-	gx, size, pitch := rx+64, 28, 112
+	gy := ey + 36
+	txt(&b, rx, gy+18, 10, colMuted, "", "GEAR")
+	gx, size, pitch := rx+22, 28, 126
 	for i, item := range []*equipment.Item{loadout.Weapon, loadout.Shield, loadout.Accessory} {
 		cx := gx + i*pitch + (pitch-size)/2
 		writeGearSlot(&b, cx, gy, size, item)
@@ -381,7 +381,7 @@ func render(login string, char *stats.Character, loadout equipment.Loadout) stri
 		if item != nil {
 			label, color = strings.ToUpper(item.Name), colMuted
 		}
-		txt(&b, gx+i*pitch+pitch/2, gy+size+12, 6, color, "middle", label)
+		txt(&b, gx+i*pitch+pitch/2, gy+size+13, 7, color, "middle", label)
 	}
 
 	b.WriteString("</svg>")
