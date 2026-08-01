@@ -40,7 +40,7 @@ GitRPG reads your public GitHub activity and assigns you a character. Your prima
 
 You get a README card you can embed anywhere.
 
-![GitRPG](https://gitrpg.onrender.com/card/lazzerex.svg)
+![GitRPG](https://gitrpg.onrender.com/card/lazzerex.svg?v=2)
 
 ## Features
 
