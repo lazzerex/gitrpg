@@ -91,25 +91,25 @@ func clampStat(score float64) int {
 }
 
 // STR: code output — commits and merged PRs.
-// Soft caps: 3000 commits (70%), 200 PRs (30%).
+// Soft caps: 3500 commits (70%), 250 PRs (30%).
 func calcSTR(s *github.Stats) int {
-	score := float64(s.CommitsCount)/3000*70 + float64(s.PRsMerged)/200*30
+	score := float64(s.CommitsCount)/3500*70 + float64(s.PRsMerged)/250*30
 	return clampStat(score)
 }
 
 // INT: technical depth — language breadth, qualified repos, stars.
-// Soft caps: 10 languages (30%), 30 qualified repos (40%), 200 stars (30%).
+// Soft caps: 12 languages (30%), 35 qualified repos (40%), 300 stars (30%).
 func calcINT(s *github.Stats) int {
-	score := float64(len(s.Languages))/10*30 +
-		float64(s.QualifiedRepos)/30*40 +
-		float64(s.StarsReceived)/200*30
+	score := float64(len(s.Languages))/12*30 +
+		float64(s.QualifiedRepos)/35*40 +
+		float64(s.StarsReceived)/300*30
 	return clampStat(score)
 }
 
 // WIS: helping others — reviews and issue closure. Floor of 5.
-// Soft caps: 100 reviews (70%), 200 issues closed (30%).
+// Soft caps: 150 reviews (70%), 250 issues closed (30%).
 func calcWIS(s *github.Stats) int {
-	score := float64(s.ReviewsCount)/100*70 + float64(s.IssuesClosed)/200*30
+	score := float64(s.ReviewsCount)/150*70 + float64(s.IssuesClosed)/250*30
 	v := clampStat(score)
 	if v < 5 {
 		return 5
