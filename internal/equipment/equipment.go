@@ -40,6 +40,12 @@ var bySlug = func() map[string]Item {
 	return m
 }()
 
+// Lookup returns the catalog item for a slug.
+func Lookup(slug string) (Item, bool) {
+	it, ok := bySlug[slug]
+	return it, ok
+}
+
 type Loadout struct {
 	Weapon    *Item
 	Shield    *Item
