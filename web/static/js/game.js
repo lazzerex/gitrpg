@@ -122,16 +122,42 @@
         state.pending = { mode: nextMode, title: title, sub: sub, t: delay };
     }
 
+    // Live-enemy cap: late waves hold the same total, but feed in gradually
+    // instead of surrounding the player all at once.
+    function maxAlive() {
+        return 4 + state.wave;
+    }
+
+    // Best of three edge candidates by distance, so spawns don't land on a
+    // player pinned against that edge.
+    function spawnPoint(size) {
+        var p = state.player;
+        var pick = { x: 0, y: 0 }, best = -1;
+        for (var i = 0; i < 3; i++) {
+            var x = Math.random() * (W - size);
+            var y = Math.random() * (H - size);
+            switch (Math.floor(Math.random() * 4)) {
+                case 0: y = -size; break;
+                case 1: y = H; break;
+                case 2: x = -size; break;
+                default: x = W;
+            }
+            var dx = x - p.x, dy = y - p.y;
+            if (dx * dx + dy * dy > best) {
+                best = dx * dx + dy * dy;
+                pick.x = x;
+                pick.y = y;
+            }
+        }
+        return pick;
+    }
+
     function spawnEnemy(type) {
         var t = enemyTypes[type];
         var size = type === 'boss' ? 64 : SIZE;
-        var edge = Math.floor(Math.random() * 4);
-        var x = Math.random() * (W - size);
-        var y = Math.random() * (H - size);
-        if (edge === 0) y = -size;
-        if (edge === 1) y = H;
-        if (edge === 2) x = -size;
-        if (edge === 3) x = W;
+        var at = spawnPoint(size);
+        var x = at.x;
+        var y = at.y;
         // Wave 1 gets base values; each later wave adds one step.
         var step = state.wave - 1;
         var hp = Math.round((t.hp + step * t.hpW) * hpScale());
@@ -456,7 +482,6 @@
             }
             if (e.phaseT <= 0) {
                 var r = Math.random();
-                var adds = state.enemies.length - 1;
                 if (r < 0.55) {
                     e.phase = 'telegraph';
                     e.phaseT = 0.45;
@@ -473,7 +498,7 @@
                     burst(e.x + e.size / 2, e.y + e.size / 2, '#e05d44', 10, 100);
                     e.phase = 'chase';
                     e.phaseT = 1.2;
-                } else if (adds < 6) {
+                } else if (state.enemies.length <= maxAlive() - 3) {
                     spawnEnemy('slime');
                     spawnEnemy('slime');
                     spawnEnemy(Math.random() < 0.5 ? 'imp' : 'wraith');
@@ -537,8 +562,12 @@
             if (state.spawnQueue.length > 0) {
                 state.spawnTimer -= dt;
                 if (state.spawnTimer <= 0) {
-                    spawnEnemy(state.spawnQueue.pop());
-                    state.spawnTimer = 0.35 + Math.random() * 0.6;
+                    if (state.enemies.length < maxAlive()) {
+                        spawnEnemy(state.spawnQueue.pop());
+                        state.spawnTimer = 0.35 + Math.random() * 0.6;
+                    } else {
+                        state.spawnTimer = 0.3;
+                    }
                 }
             }
 
