@@ -21,6 +21,7 @@ import (
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
 	"github.com/lazzerex/gitrpg/internal/quests"
 	"github.com/lazzerex/gitrpg/internal/server"
+	"github.com/lazzerex/gitrpg/internal/svg"
 	"github.com/lazzerex/gitrpg/internal/users"
 	"github.com/lazzerex/gitrpg/internal/worker"
 )
@@ -86,6 +87,10 @@ func main() {
 	if err := srv.LoadTemplates("web/templates"); err != nil {
 		logger.Error("template load failed", "error", err)
 		os.Exit(1)
+	}
+
+	if err := svg.LoadAssets("web/static/assets"); err != nil {
+		logger.Warn("card asset load incomplete", "error", err)
 	}
 
 	go func() {
