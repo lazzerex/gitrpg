@@ -5,6 +5,7 @@ package testdb
 import (
 	"context"
 	"database/sql"
+	"hash/fnv"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -45,6 +46,14 @@ func Pool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+var migrateLockID = advisoryLockID("gitrpg.testdb.migrations")
+
+func advisoryLockID(name string) int64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(name))
+	return int64(h.Sum64())
+}
+
 func migrate(url string) error {
 	dir, err := migrationsDir()
 	if err != nil {
@@ -55,6 +64,21 @@ func migrate(url string) error {
 		return err
 	}
 	defer func() { _ = db.Close() }()
+
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+
+	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock($1)`, migrateLockID); err != nil {
+		return err
+	}
+	defer func() {
+		_, _ = conn.ExecContext(ctx, `SELECT pg_advisory_unlock($1)`, migrateLockID)
+	}()
+
 	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
