@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,15 @@ import (
 )
 
 const apiURL = "https://api.github.com/graphql"
+
+var ErrUnauthorized = errors.New("github: access token rejected")
+
+func statusError(status int) error {
+	if status == http.StatusUnauthorized {
+		return fmt.Errorf("github graphql: HTTP 401: %w", ErrUnauthorized)
+	}
+	return fmt.Errorf("github graphql: HTTP %d", status)
+}
 
 type Client struct {
 	http       *http.Client
@@ -55,7 +65,7 @@ func (c *Client) query(ctx context.Context, q string, vars map[string]any, out a
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("github graphql: HTTP %d", resp.StatusCode)
+		return statusError(resp.StatusCode)
 	}
 
 	var gr gqlResp
