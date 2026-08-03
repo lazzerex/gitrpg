@@ -92,8 +92,7 @@
         boss: { hp: 400, hpW: 0, speed: 55, speedW: 0, maxSpeed: 55, touch: 25, color: '#8e2a3c' }
     };
 
-    // Player damage swings from ~10 to ~50 depending on POWER, so enemy HP
-    // tracks it — otherwise strong characters one-shot everything.
+    // Damage swings ~10-50 with POWER; without this, strong characters one-shot everything.
     function hpScale() {
         return 0.8 + state.player.dmg / 30;
     }
@@ -122,14 +121,11 @@
         state.pending = { mode: nextMode, title: title, sub: sub, t: delay };
     }
 
-    // Live-enemy cap: late waves hold the same total, but feed in gradually
-    // instead of surrounding the player all at once.
     function maxAlive() {
         return 4 + state.wave;
     }
 
-    // Best of three edge candidates by distance, so spawns don't land on a
-    // player pinned against that edge.
+    // Farthest of three edge candidates, so spawns miss a cornered player.
     function spawnPoint(size) {
         var p = state.player;
         var pick = { x: 0, y: 0 }, best = -1;
@@ -158,7 +154,6 @@
         var at = spawnPoint(size);
         var x = at.x;
         var y = at.y;
-        // Wave 1 gets base values; each later wave adds one step.
         var step = state.wave - 1;
         var hp = Math.round((t.hp + step * t.hpW) * hpScale());
         if (type === 'boss') {
