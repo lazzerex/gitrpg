@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -24,6 +23,8 @@ import (
 	"github.com/lazzerex/gitrpg/internal/characters"
 	"github.com/lazzerex/gitrpg/internal/config"
 	"github.com/lazzerex/gitrpg/internal/equipment"
+	"github.com/lazzerex/gitrpg/internal/events"
+	"github.com/lazzerex/gitrpg/internal/github"
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
 	"github.com/lazzerex/gitrpg/internal/quests"
 	"github.com/lazzerex/gitrpg/internal/stats"
@@ -47,7 +48,6 @@ type Server struct {
 	equipment    *equipment.Service
 	quests       *quests.Service
 	leaderboards *leaderboards.Service
-	syncStart    sync.Map // userID int64 → time.Time
 	httpServer   *http.Server
 }
 
@@ -297,10 +297,16 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("quests load failed", "user_id", user.ID, "error", err)
 	}
 
+	var needsReauth bool
+	if last, statusErr := s.worker.LatestSyncStatus(r.Context(), user.ID); statusErr == nil && last != nil {
+		needsReauth = last.Status == github.StatusUnauthorized
+	}
+
 	s.render(w, "profile.html", profileData{
 		User:         user,
 		Character:    char,
 		IsStale:      isStale,
+		NeedsReauth:  needsReauth,
 		AccentColor:  accentColor,
 		BaseURL:      requestBaseURL(r),
 		Achievements: achs,
@@ -346,10 +352,38 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.syncStart.Store(user.ID, time.Now())
+	if err := s.setSyncStart(r.Context(), user.ID, time.Now()); err != nil {
+		s.logger.Warn("sync start marker failed", "user_id", user.ID, "error", err)
+	}
 	s.worker.SyncUser(user)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = fmt.Fprint(w, syncingHTML)
+}
+
+// Redis, not process memory: a restart or second instance would strand the poller.
+func syncStartKey(userID int64) string {
+	return fmt.Sprintf("sync:started:%d", userID)
+}
+
+func (s *Server) setSyncStart(ctx context.Context, userID int64, t time.Time) error {
+	return s.redis.Set(ctx, syncStartKey(userID), t.UnixMilli(), 5*time.Minute).Err()
+}
+
+func (s *Server) syncStart(ctx context.Context, userID int64) (time.Time, bool, error) {
+	ms, err := s.redis.Get(ctx, syncStartKey(userID)).Int64()
+	if err == redis.Nil {
+		return time.Time{}, false, nil
+	}
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return time.UnixMilli(ms), true, nil
+}
+
+func (s *Server) clearSyncStart(ctx context.Context, userID int64) {
+	if err := s.redis.Del(ctx, syncStartKey(userID)).Err(); err != nil {
+		s.logger.Warn("sync start marker clear failed", "user_id", userID, "error", err)
+	}
 }
 
 const syncingHTML = `<div id="sync-status" hx-get="/sync/status" hx-trigger="every 2s" hx-swap="outerHTML"><p class="blink" style="color:var(--gold);font-size:8px;letter-spacing:1px;">SYNCING...</p></div>`
@@ -359,33 +393,43 @@ const syncCooldownHTML = `<div id="sync-status"><p style="color:var(--gold);font
 func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	user, _ := r.Context().Value(users.ContextKey).(*users.User)
 
-	startVal, ok := s.syncStart.Load(user.ID)
+	startTime, ok, err := s.syncStart(r.Context(), user.ID)
+	if err != nil {
+		s.logger.Warn("sync start marker read failed", "user_id", user.ID, "error", err)
+	}
 	if !ok {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	startTime := startVal.(time.Time)
 
 	char, err := s.characters.GetByUserID(r.Context(), user.ID)
 	if err == nil && char != nil && char.UpdatedAt.After(startTime) {
-		s.syncStart.Delete(user.ID)
-		_ = s.redis.Del(r.Context(), "svg:card:"+user.Login).Err()
+		s.clearSyncStart(r.Context(), user.ID)
+		_ = s.redis.Del(r.Context(), cardCacheKey(user.Login)).Err()
 		w.Header().Set("HX-Redirect", "/profile")
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
 	if syncStatus, statusErr := s.worker.LatestSyncStatus(r.Context(), user.ID); statusErr == nil &&
-		syncStatus != nil && syncStatus.Status == "failed" &&
-		syncStatus.CompletedAt != nil && syncStatus.CompletedAt.After(startTime) {
-		s.syncStart.Delete(user.ID)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, syncErrorHTML)
-		return
+		syncStatus != nil && syncStatus.CompletedAt != nil && syncStatus.CompletedAt.After(startTime) {
+		body := ""
+		switch syncStatus.Status {
+		case github.StatusUnauthorized:
+			body = syncReauthHTML
+		case "failed":
+			body = syncErrorHTML
+		}
+		if body != "" {
+			s.clearSyncStart(r.Context(), user.ID)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, body)
+			return
+		}
 	}
 
 	if time.Since(startTime) > 3*time.Minute {
-		s.syncStart.Delete(user.ID)
+		s.clearSyncStart(r.Context(), user.ID)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprint(w, syncBtnHTML)
 		return
@@ -398,6 +442,8 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 const syncBtnHTML = `<div id="sync-status"><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i aria-hidden="true" data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--gold);stroke-width:2;"></i>SYNC NOW</button></div>`
 
 const syncErrorHTML = `<div id="sync-status"><p style="color:var(--red);font-size:8px;margin-bottom:8px;">SYNC FAILED. TRY AGAIN?</p><button hx-post="/sync" hx-target="#sync-status" hx-swap="outerHTML" class="px-btn px-btn-red" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i aria-hidden="true" data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--red);stroke-width:2;"></i>RETRY SYNC</button></div>`
+
+const syncReauthHTML = `<div id="sync-status"><p style="color:var(--red);font-size:8px;margin-bottom:8px;">GITHUB ACCESS EXPIRED.</p><a href="/auth/github" class="px-btn px-btn-red" style="font-size:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><i aria-hidden="true" data-lucide="refresh-cw" style="width:12px;height:12px;stroke:var(--red);stroke-width:2;"></i>RECONNECT GITHUB</a></div>`
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -450,6 +496,7 @@ type profileData struct {
 	User         *users.User
 	Character    *stats.Character
 	IsStale      bool
+	NeedsReauth  bool
 	AccentColor  string
 	BaseURL      string
 	Achievements []achievements.UserAchievement
@@ -605,7 +652,7 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cacheKey := "svg:card:" + username
+	cacheKey := cardCacheKey(username)
 
 	cached, err := s.redis.Get(r.Context(), cacheKey).Result()
 	if err == nil {
@@ -645,6 +692,22 @@ func (s *Server) serveCard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.svgResponse(w, svgStr)
+}
+
+func cardCacheKey(login string) string {
+	return "svg:card:" + login
+}
+
+func InvalidateCardCache(rdb *redis.Client, logger *slog.Logger) events.Handler {
+	return func(ctx context.Context, e events.Event) {
+		login, _ := e.Payload["login"].(string)
+		if login == "" {
+			return
+		}
+		if err := rdb.Del(ctx, cardCacheKey(login)).Err(); err != nil {
+			logger.Warn("card cache purge failed", "login", login, "error", err)
+		}
+	}
 }
 
 func (s *Server) svgResponse(w http.ResponseWriter, svg string) {
