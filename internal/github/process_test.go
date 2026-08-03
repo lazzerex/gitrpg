@@ -109,6 +109,47 @@ func TestCalculateStreaks_CurrentSkipsEmptyToday(t *testing.T) {
 	}
 }
 
+func TestCalculateStreaks_IgnoresDuplicateDays(t *testing.T) {
+	days := []CalendarDay{
+		{Date: "2020-01-01", Count: 1},
+		{Date: "2020-01-02", Count: 1},
+		{Date: "2020-01-02", Count: 1},
+		{Date: "2020-01-03", Count: 1},
+		{Date: "2020-01-03", Count: 1},
+		{Date: "2020-01-04", Count: 0},
+	}
+	longest, _, _ := calculateStreaks(days)
+	if longest != 3 {
+		t.Errorf("longest = %d, want 3 (Jan 1-3, duplicates collapsed)", longest)
+	}
+}
+
+func TestCalculateStreaks_DuplicateDaysDoNotInflateActiveDays(t *testing.T) {
+	day := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
+	days := []CalendarDay{
+		{Date: day, Count: 1},
+		{Date: day, Count: 1},
+		{Date: day, Count: 1},
+	}
+	_, _, active := calculateStreaks(days)
+	if active != 1 {
+		t.Errorf("activeDays90 = %d, want 1 (same date counted once)", active)
+	}
+}
+
+func TestCalculateStreaks_UnorderedInput(t *testing.T) {
+	days := []CalendarDay{
+		{Date: "2020-01-03", Count: 1},
+		{Date: "2020-01-01", Count: 1},
+		{Date: "2020-01-04", Count: 0},
+		{Date: "2020-01-02", Count: 1},
+	}
+	longest, _, _ := calculateStreaks(days)
+	if longest != 3 {
+		t.Errorf("longest = %d, want 3", longest)
+	}
+}
+
 func TestCalculateStreaks_ActiveDays90(t *testing.T) {
 	now := time.Now()
 	days := []CalendarDay{
