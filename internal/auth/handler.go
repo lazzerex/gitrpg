@@ -51,7 +51,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	authURL := "https://github.com/login/oauth/authorize?" + url.Values{
 		"client_id":    {h.cfg.GitHub.ClientID},
 		"redirect_uri": {h.cfg.GitHub.CallbackURL},
-		"scope":        {"read:user user:email repo"},
+		"scope":        {"read:user user:email"},
 		"state":        {state},
 	}.Encode()
 
