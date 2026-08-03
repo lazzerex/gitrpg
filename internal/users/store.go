@@ -3,6 +3,8 @@ package users
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,12 +15,13 @@ import (
 var ErrNotFound = errors.New("user not found")
 
 type Store struct {
-	db  *pgxpool.Pool
-	key []byte // nil = no encryption (dev)
+	db     *pgxpool.Pool
+	key    []byte // nil = no encryption (dev)
+	logger *slog.Logger
 }
 
-func NewStore(db *pgxpool.Pool, key []byte) *Store {
-	return &Store{db: db, key: key}
+func NewStore(db *pgxpool.Pool, key []byte, logger *slog.Logger) *Store {
+	return &Store{db: db, key: key, logger: logger}
 }
 
 func (s *Store) Upsert(ctx context.Context, u *User) (*User, error) {
@@ -37,16 +40,20 @@ func (s *Store) Upsert(ctx context.Context, u *User) (*User, error) {
 			email        = EXCLUDED.email,
 			access_token = EXCLUDED.access_token,
 			updated_at   = now()
-		RETURNING id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
+		RETURNING id, github_id, login, COALESCE(name,''), COALESCE(avatar_url,''), COALESCE(email,''), access_token, created_at, updated_at
 	`
 	row := s.db.QueryRow(ctx, q, u.GitHubID, u.Login, u.Name, u.AvatarURL, u.Email, storedToken)
 	return s.scanUser(row)
 }
 
+// Logins are renameable and recyclable, so two rows can hold one login until
+// the renamed account signs in again; most recently updated is the owner.
 func (s *Store) GetByLogin(ctx context.Context, login string) (*User, error) {
 	const q = `
-		SELECT id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
+		SELECT id, github_id, login, COALESCE(name,''), COALESCE(avatar_url,''), COALESCE(email,''), access_token, created_at, updated_at
 		FROM users WHERE login = $1
+		ORDER BY updated_at DESC, id DESC
+		LIMIT 1
 	`
 	row := s.db.QueryRow(ctx, q, login)
 	u, err := s.scanUser(row)
@@ -58,7 +65,7 @@ func (s *Store) GetByLogin(ctx context.Context, login string) (*User, error) {
 
 func (s *Store) GetByID(ctx context.Context, id int64) (*User, error) {
 	const q = `
-		SELECT id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
+		SELECT id, github_id, login, COALESCE(name,''), COALESCE(avatar_url,''), COALESCE(email,''), access_token, created_at, updated_at
 		FROM users WHERE id = $1
 	`
 	row := s.db.QueryRow(ctx, q, id)
@@ -71,7 +78,7 @@ func (s *Store) GetByID(ctx context.Context, id int64) (*User, error) {
 
 func (s *Store) ListAll(ctx context.Context) ([]*User, error) {
 	const q = `
-		SELECT id, github_id, login, name, avatar_url, email, access_token, created_at, updated_at
+		SELECT id, github_id, login, COALESCE(name,''), COALESCE(avatar_url,''), COALESCE(email,''), access_token, created_at, updated_at
 		FROM users ORDER BY id
 	`
 	rows, err := s.db.Query(ctx, q)
@@ -127,8 +134,21 @@ func (s *Store) decryptToken(stored string) string {
 	}
 	plaintext, err := crypto.Open(stored, s.key)
 	if err != nil {
-		// legacy plaintext token — will be re-encrypted on next login
+		if !isPlaintextToken(stored) {
+			s.logger.Warn("stored access token failed to decrypt, sending it as-is will fail; TOKEN_ENCRYPTION_KEY was likely rotated and the user must sign in again")
+		}
 		return stored
 	}
 	return string(plaintext)
+}
+
+var tokenPrefixes = []string{"gho_", "ghu_", "ghp_", "ghs_", "github_pat_"}
+
+func isPlaintextToken(s string) bool {
+	for _, p := range tokenPrefixes {
+		if strings.HasPrefix(s, p) {
+			return true
+		}
+	}
+	return false
 }
