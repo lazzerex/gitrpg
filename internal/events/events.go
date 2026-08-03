@@ -9,6 +9,7 @@ import (
 
 const (
 	TypeGithubSynced        = "github.synced"
+	TypeCharacterUpdated    = "character.updated"
 	TypeLevelUp             = "level.up"
 	TypeAchievementUnlocked = "achievement.unlocked"
 	TypeEquipmentChanged    = "equipment.changed"
