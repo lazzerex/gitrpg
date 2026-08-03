@@ -67,11 +67,23 @@ func (s *store) startSync(ctx context.Context, userID int64) (int64, error) {
 	return id, err
 }
 
+const StatusUnauthorized = "unauthorized"
+
+func syncStatusFor(syncErr error) string {
+	switch {
+	case syncErr == nil:
+		return "success"
+	case errors.Is(syncErr, ErrUnauthorized):
+		return StatusUnauthorized
+	default:
+		return "failed"
+	}
+}
+
 func (s *store) completeSync(ctx context.Context, id int64, pointsUsed int, syncErr error) error {
-	status := "success"
+	status := syncStatusFor(syncErr)
 	errMsg := ""
 	if syncErr != nil {
-		status = "failed"
 		errMsg = syncErr.Error()
 	}
 	_, err := s.db.Exec(ctx, `
