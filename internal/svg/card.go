@@ -81,8 +81,6 @@ var gearIcons = map[string]string{
 	"cpp-gauntlet":      iconHelmet,
 }
 
-// Assets loaded from disk at startup: class sprites and the pixel font.
-// Cards render without them (no sprite, fallback font) if loading fails.
 var spriteB64 = map[string]string{}
 
 // LoadAssets reads class sprites and the card font from the static assets
