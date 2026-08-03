@@ -1,6 +1,14 @@
 {{define "char-panel"}}
 <div id="char-panel">
 
+    {{if .NeedsReauth}}
+    <div class="px-panel-red" style="padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <i aria-hidden="true" data-lucide="alert-triangle" style="width:14px;height:14px;stroke:var(--red);stroke-width:2;flex-shrink:0;"></i>
+        <p style="color:var(--red);font-size:8px;flex:1;min-width:180px;">GITHUB ACCESS EXPIRED. SYNCS ARE PAUSED UNTIL YOU RECONNECT.</p>
+        <a href="/auth/github" class="px-btn px-btn-red" style="font-size:8px;padding:8px 14px;">RECONNECT GITHUB</a>
+    </div>
+    {{end}}
+
     {{if .IsStale}}
     <div class="px-panel-red" style="padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
         <i aria-hidden="true" data-lucide="alert-triangle" style="width:14px;height:14px;stroke:var(--red);stroke-width:2;flex-shrink:0;"></i>
