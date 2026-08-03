@@ -72,7 +72,7 @@ func main() {
 	}
 	logger.Info("redis connected")
 
-	userStore := users.NewStore(db, cfg.Token.Key)
+	userStore := users.NewStore(db, cfg.Token.Key, logger)
 	githubSvc := github.NewService(db, logger)
 	charSvc := characters.NewService(db, logger)
 	achSvc := achievements.NewService(db, logger)
@@ -81,6 +81,7 @@ func main() {
 	questSvc := quests.NewService(db, logger)
 	bus := events.NewBus(db, logger)
 	w := worker.New(githubSvc, charSvc, achSvc, eqSvc, questSvc, userStore, bus, logger)
+	bus.Subscribe(events.TypeCharacterUpdated, server.InvalidateCardCache(rdb, logger))
 
 	srv := server.New(cfg, db, rdb, logger, w, charSvc, achSvc, eqSvc, questSvc, lbSvc, userStore)
 
