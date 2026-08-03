@@ -1,6 +1,7 @@
 package github
 
 import (
+	"sort"
 	"strings"
 	"time"
 )
@@ -93,7 +94,25 @@ func process(userID int64, raw *RawStats) *Stats {
 	return s
 }
 
+// Year windows are day-aligned but contributionCalendar returns whole weeks,
+// so boundary days arrive once per window.
+func dedupeDays(days []CalendarDay) []CalendarDay {
+	best := make(map[string]int, len(days))
+	for _, d := range days {
+		if c, ok := best[d.Date]; !ok || d.Count > c {
+			best[d.Date] = d.Count
+		}
+	}
+	out := make([]CalendarDay, 0, len(best))
+	for date, count := range best {
+		out = append(out, CalendarDay{Date: date, Count: count})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Date < out[j].Date })
+	return out
+}
+
 func calculateStreaks(days []CalendarDay) (longest, current, activeDays90 int) {
+	days = dedupeDays(days)
 	now := time.Now()
 	cutoff90 := now.AddDate(0, 0, -90)
 	today := now.Format("2006-01-02")
