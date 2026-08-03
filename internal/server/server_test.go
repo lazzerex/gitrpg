@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/lazzerex/gitrpg/internal/leaderboards"
@@ -51,6 +52,7 @@ func TestPageTemplates_ExecuteWithoutError(t *testing.T) {
 		{"index, anonymous", "index.html", indexData{BaseURL: "https://example.com"}},
 		{"index, logged in", "index.html", indexData{User: user, CharClass: "Guardian", BaseURL: "https://example.com"}},
 		{"profile", "profile.html", profileData{User: user, Character: char, BaseURL: "https://example.com"}},
+		{"profile, needs reauth", "profile.html", profileData{User: user, Character: char, NeedsReauth: true, BaseURL: "https://example.com"}},
 		{"public profile, synced", "public.html", publicProfileData{ProfileUser: user, Character: char, BaseURL: "https://example.com"}},
 		{"public profile, unsynced", "public.html", publicProfileData{ProfileUser: user, BaseURL: "https://example.com"}},
 		{"cards", "cards.html", baseData{BaseURL: "https://example.com"}},
@@ -68,6 +70,31 @@ func TestPageTemplates_ExecuteWithoutError(t *testing.T) {
 				t.Fatal("expected non-empty output")
 			}
 		})
+	}
+}
+
+func TestProfile_ReauthBanner(t *testing.T) {
+	s := &Server{}
+	if err := s.LoadTemplates("../../web/templates"); err != nil {
+		t.Fatalf("LoadTemplates failed: %v", err)
+	}
+	user := &users.User{Login: "octocat"}
+	char := &stats.Character{Level: 5, Class: "Guardian", Title: "The Adventurer"}
+
+	render := func(needsReauth bool) string {
+		var buf bytes.Buffer
+		data := profileData{User: user, Character: char, NeedsReauth: needsReauth, BaseURL: "https://example.com"}
+		if err := s.templates["profile.html"].ExecuteTemplate(&buf, "base.html", data); err != nil {
+			t.Fatalf("execute profile.html: %v", err)
+		}
+		return buf.String()
+	}
+
+	if out := render(true); !strings.Contains(out, "RECONNECT GITHUB") {
+		t.Error("profile with NeedsReauth is missing the reconnect prompt")
+	}
+	if out := render(false); strings.Contains(out, "RECONNECT GITHUB") {
+		t.Error("profile without NeedsReauth must not show the reconnect prompt")
 	}
 }
 
