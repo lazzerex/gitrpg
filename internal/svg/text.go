@@ -11,25 +11,21 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-// Card text is drawn as glyph outlines rather than <text> with an embedded
-// @font-face: an SVG loaded as an image (README embed, GitHub camo) renders in
-// secure static mode, where webfonts are unreliable and the card silently falls
-// back to a system font.
-
 type pathCmd struct {
 	op  byte
 	pts [3][2]float64
 }
 
-// glyph holds outline commands and advance width in em units, y-down from the baseline.
+// Em units, y-down from the baseline.
 type glyph struct {
 	cmds    []pathCmd
 	advance float64
 }
 
+// Outlines instead of <text> + @font-face: an SVG loaded as an image renders
+// in secure static mode, where webfonts are unreliable.
 var glyphs map[rune]glyph
 
-// loadGlyphs parses a TrueType file and caches printable ASCII outlines.
 func loadGlyphs(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -100,7 +96,6 @@ func num(v float64) string {
 	return strconv.FormatFloat(math.Round(v*100)/100, 'f', -1, 64)
 }
 
-// glyphPath appends one glyph's outline, positioned at baseline point (x, y).
 func glyphPath(b *strings.Builder, g glyph, x, y, size float64) {
 	open := false
 	for _, c := range g.cmds {
@@ -132,8 +127,6 @@ func glyphPath(b *strings.Builder, g glyph, x, y, size float64) {
 	}
 }
 
-// textPath renders s as a single filled path. anchor is "", "middle" or "end",
-// matching the text-anchor attribute it replaces.
 func textPath(b *strings.Builder, x, y, size float64, fill, anchor, s string) {
 	switch anchor {
 	case "middle":
