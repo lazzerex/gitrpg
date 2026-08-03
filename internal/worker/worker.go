@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -68,23 +69,46 @@ func (w *Worker) syncAll(ctx context.Context) {
 		return
 	}
 	w.logger.Info("worker: periodic sync starting", "count", len(allUsers))
+
+	sem := make(chan struct{}, syncConcurrency)
+	var wg sync.WaitGroup
 	for _, u := range allUsers {
 		select {
 		case <-ctx.Done():
+			wg.Wait()
 			return
-		default:
+		case sem <- struct{}{}:
 		}
-		needsSync, err := w.github.NeedsSync(ctx, u)
-		if err != nil {
-			w.logger.Warn("worker: activity check failed, syncing anyway", "user_id", u.ID, "login", u.Login, "error", err)
-		} else if !needsSync {
-			w.logger.Info("worker: skip sync, no new activity", "user_id", u.ID, "login", u.Login)
-			continue
-		}
-		syncCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		w.syncOne(syncCtx, u)
-		cancel()
+		wg.Add(1)
+		go func(u *users.User) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			w.syncUserIfNeeded(ctx, u)
+		}(u)
 	}
+	wg.Wait()
+}
+
+// Each user syncs with their own token, so the bound is the database pool, not GitHub.
+const syncConcurrency = 4
+
+func (w *Worker) syncUserIfNeeded(ctx context.Context, u *users.User) {
+	if last, statusErr := w.github.LatestSyncStatus(ctx, u.ID); statusErr == nil &&
+		last != nil && last.Status == github.StatusUnauthorized {
+		w.logger.Warn("worker: skip sync, token rejected — user must sign in again",
+			"user_id", u.ID, "login", u.Login)
+		return
+	}
+	needsSync, err := w.github.NeedsSync(ctx, u)
+	if err != nil {
+		w.logger.Warn("worker: activity check failed, syncing anyway", "user_id", u.ID, "login", u.Login, "error", err)
+	} else if !needsSync {
+		w.logger.Info("worker: skip sync, no new activity", "user_id", u.ID, "login", u.Login)
+		return
+	}
+	syncCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	w.syncOne(syncCtx, u)
 }
 
 func (w *Worker) LatestSyncStatus(ctx context.Context, userID int64) (*github.SyncStatus, error) {
@@ -138,6 +162,8 @@ func (w *Worker) syncOne(ctx context.Context, user *users.User) {
 		w.logger.Error("character upsert failed", "user_id", user.ID, "error", err)
 		return
 	}
+	w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeCharacterUpdated,
+		Payload: map[string]any{"login": user.Login}})
 	if prev != nil && char.Level > prev.Level {
 		w.bus.Publish(ctx, events.Event{UserID: user.ID, Type: events.TypeLevelUp,
 			Payload: map[string]any{"from": prev.Level, "to": char.Level}})
